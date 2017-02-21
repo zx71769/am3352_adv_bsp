@@ -140,7 +140,7 @@
 		"run ramargs; " \
 		"bootz ${loadaddr} ${rdaddr} ${fdtaddr}\0" \
 	"findfdt=setenv fdtfile am335x-adv.dtb;\0"\
-	"init_console=setenv console ttyO0,115200n8;\0" \
+	"init_console=setenv console ttyS0,115200n8;\0" \
 	NANDARGS \
 	NETARGS \
 	DFUARGS
