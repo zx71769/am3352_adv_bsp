@@ -182,7 +182,6 @@ static void dns_handler(uchar *pkt, unsigned dest, struct in_addr sip,
 
 		if (p + dlen <= e) {
 			ip_to_string(ip_addr, ip_str);
-			printf("%s\n", ip_str);
 			if (net_dns_env_var)
 				setenv(net_dns_env_var, ip_str);
 		} else {

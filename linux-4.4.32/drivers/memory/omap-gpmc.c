@@ -256,12 +256,12 @@ static struct clk *gpmc_l3_clk;
 
 static irqreturn_t gpmc_handle_irq(int irq, void *dev);
 
-static void gpmc_write_reg(int idx, u32 val)
+void gpmc_write_reg(int idx, u32 val)
 {
 	writel_relaxed(val, gpmc_base + idx);
 }
 
-static u32 gpmc_read_reg(int idx)
+u32 gpmc_read_reg(int idx)
 {
 	return readl_relaxed(gpmc_base + idx);
 }
@@ -2253,10 +2253,35 @@ static int gpmc_probe_dt_children(struct platform_device *pdev)
 }
 #endif
 
+void gpmc_show_revision(void)
+{
+	u32 l;
+
+	l = gpmc_read_reg(GPMC_REVISION);
+	/*
+	 * FIXME: Once device-tree migration is complete the below flags
+	 * should be populated based upon the device-tree compatible
+	 * string. For now just use the IP revision. OMAP3+ devices have
+	 * the wr_access and wr_data_mux_bus register fields. OMAP4+
+	 * devices support the addr-addr-data multiplex protocol.
+	 *
+	 * GPMC IP revisions:
+	 * - OMAP24xx			= 2.0
+	 * - OMAP3xxx			= 5.0
+	 * - OMAP44xx/54xx/AM335x	= 6.0
+	 */
+	if (GPMC_REVISION_MAJOR(l) > 0x4)
+		gpmc_capability = GPMC_HAS_WR_ACCESS | GPMC_HAS_WR_DATA_MUX_BUS;
+	if (GPMC_REVISION_MAJOR(l) > 0x5)
+		gpmc_capability |= GPMC_HAS_MUX_AAD;
+
+	pr_info("GPMC revision %d.%d\n", GPMC_REVISION_MAJOR(l),
+									GPMC_REVISION_MINOR(l));
+}
+
 static int gpmc_probe(struct platform_device *pdev)
 {
 	int rc;
-	u32 l;
 	struct resource *res;
 	struct gpmc_device *gpmc;
 
@@ -2309,26 +2334,7 @@ static int gpmc_probe(struct platform_device *pdev)
 	pm_runtime_enable(&pdev->dev);
 	pm_runtime_get_sync(&pdev->dev);
 
-	l = gpmc_read_reg(GPMC_REVISION);
-
-	/*
-	 * FIXME: Once device-tree migration is complete the below flags
-	 * should be populated based upon the device-tree compatible
-	 * string. For now just use the IP revision. OMAP3+ devices have
-	 * the wr_access and wr_data_mux_bus register fields. OMAP4+
-	 * devices support the addr-addr-data multiplex protocol.
-	 *
-	 * GPMC IP revisions:
-	 * - OMAP24xx			= 2.0
-	 * - OMAP3xxx			= 5.0
-	 * - OMAP44xx/54xx/AM335x	= 6.0
-	 */
-	if (GPMC_REVISION_MAJOR(l) > 0x4)
-		gpmc_capability = GPMC_HAS_WR_ACCESS | GPMC_HAS_WR_DATA_MUX_BUS;
-	if (GPMC_REVISION_MAJOR(l) > 0x5)
-		gpmc_capability |= GPMC_HAS_MUX_AAD;
-	dev_info(gpmc->dev, "GPMC revision %d.%d\n", GPMC_REVISION_MAJOR(l),
-		 GPMC_REVISION_MINOR(l));
+	gpmc_show_revision();	
 
 	gpmc_mem_init();
 	rc = gpmc_gpio_init(gpmc);
@@ -2421,7 +2427,7 @@ static __exit void gpmc_exit(void)
 
 }
 
-postcore_initcall(gpmc_init);
+pure_initcall(gpmc_init);
 module_exit(gpmc_exit);
 
 static struct omap3_gpmc_regs gpmc_context;
@@ -2430,8 +2436,7 @@ void omap3_gpmc_save_context(void)
 {
 	int i;
 
-	if (!gpmc_base)
-		return;
+	if (!gpmc_base) return;
 
 	gpmc_context.sysconfig = gpmc_read_reg(GPMC_SYSCONFIG);
 	gpmc_context.irqenable = gpmc_read_reg(GPMC_IRQENABLE);

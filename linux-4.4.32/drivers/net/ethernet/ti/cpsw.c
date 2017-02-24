@@ -1149,7 +1149,7 @@ static void cpsw_slave_open(struct cpsw_slave *slave, struct cpsw_priv *priv)
 	}
 
 	dev_info(priv->dev, "phy found : id is : 0x%x\n",
-		 slave->phy->phy_id);
+		 			slave->phy->phy_id);
 
 	phy_start(slave->phy);
 
@@ -2399,19 +2399,24 @@ static int cpsw_probe_dt(struct cpsw_platform_data *data,
 				return -EINVAL;
 			}
 			snprintf(slave_data->phy_id, sizeof(slave_data->phy_id),
-				 PHY_ID_FMT, mdio->name, phyid);
+				 					PHY_ID_FMT, mdio->name, phyid);
+			pr_info("CPSW: Phy%d found, id is 0x%x\n", i, phyid);
 		} else {
 			dev_err(&pdev->dev,
 				"No slave[%d] phy_id, phy-handle, or fixed-link property\n",
 				i);
 			goto no_phy_slave;
 		}
+
 		slave_data->phy_if = of_get_phy_mode(slave_node);
 		if (slave_data->phy_if < 0) {
-			dev_err(&pdev->dev, "Missing or malformed slave[%d] phy-mode property\n",
-				i);
+			dev_err(&pdev->dev, "Missing or malformed slave[%d] phy-mode property\n", i);
 			return slave_data->phy_if;
 		}
+		if(slave_data->phy_if != PHY_INTERFACE_MODE_RMII)
+			pr_err("CPSW ERROR: Phy%d mode is %d, should be RMII mode\n", i, slave_data->phy_if);
+		else
+			pr_info("CPSW: Phy%d mode is RMII mode\n", i);
 
 no_phy_slave:
 		mac_addr = of_get_mac_address(slave_node);
@@ -2466,7 +2471,7 @@ static int cpsw_probe_dual_emac(struct cpsw_priv *priv)
 	if (is_valid_ether_addr(data->slave_data[1].mac_addr)) {
 		memcpy(priv_sl2->mac_addr, data->slave_data[1].mac_addr,
 			ETH_ALEN);
-		dev_info(cpsw->dev, "cpsw: Detected MACID = %pM\n",
+		dev_info(cpsw->dev, "cpsw: Detected dual MACID = %pM\n",
 			 priv_sl2->mac_addr);
 	} else {
 		random_ether_addr(priv_sl2->mac_addr);
@@ -2606,6 +2611,8 @@ static int cpsw_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto clean_runtime_disable_ret;
 	}
+
+	pr_info("cpsw has %d slave(s)\n", data->slaves);
 	for (i = 0; i < data->slaves; i++)
 		cpsw->slaves[i].slave_num = i;
 

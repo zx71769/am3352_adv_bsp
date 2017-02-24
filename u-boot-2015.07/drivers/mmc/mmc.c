@@ -1630,7 +1630,7 @@ int mmc_start_init(struct mmc *mmc)
 
 		if (err) {
 #if !defined(CONFIG_SPL_BUILD) || defined(CONFIG_SPL_LIBCOMMON_SUPPORT)
-			printf("Card did not respond to voltage select!\n");
+			debug("Card did not respond to voltage select!\n");
 #endif
 			return UNUSABLE_ERR;
 		}
