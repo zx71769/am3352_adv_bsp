@@ -629,13 +629,13 @@ struct device_node *of_get_next_parent(struct device_node *node)
 	struct device_node *parent;
 	unsigned long flags;
 
-	if (!node)
-		return NULL;
+	if (!node) return NULL;
 
 	raw_spin_lock_irqsave(&devtree_lock, flags);
 	parent = of_node_get(node->parent);
 	of_node_put(node);
 	raw_spin_unlock_irqrestore(&devtree_lock, flags);
+
 	return parent;
 }
 EXPORT_SYMBOL(of_get_next_parent);

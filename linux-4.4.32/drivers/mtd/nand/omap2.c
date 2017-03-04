@@ -1737,16 +1737,15 @@ static int omap_nand_probe(struct platform_device *pdev)
 	struct mtd_part_parser_data	ppdata = {};
 	struct device			*dev = &pdev->dev;
 
-	info = devm_kzalloc(&pdev->dev, sizeof(struct omap_nand_info),
-				GFP_KERNEL);
-	if (!info)
-		return -ENOMEM;
+	info = devm_kzalloc(&pdev->dev, 
+						sizeof(struct omap_nand_info),
+						GFP_KERNEL);
+	if (!info) return -ENOMEM;
 
 	info->pdev = pdev;
 
 	if (dev->of_node) {
-		if (omap_get_dt_info(dev, info))
-			return -EINVAL;
+		if (omap_get_dt_info(dev, info)) return -EINVAL;
 	} else {
 		pdata = dev_get_platdata(&pdev->dev);
 		if (!pdata) {
@@ -2171,6 +2170,7 @@ static int omap_nand_remove(struct platform_device *pdev)
 	if (info->dma)
 		dma_release_channel(info->dma);
 	nand_release(mtd);
+
 	return 0;
 }
 

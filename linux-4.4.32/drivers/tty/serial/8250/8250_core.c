@@ -801,6 +801,8 @@ static int serial8250_probe(struct platform_device *dev)
 	struct uart_8250_port uart;
 	int ret, i, irqflag = 0;
 
+	pr_info("Phil: ==== %s ====\n", __func__);
+
 	memset(&uart, 0, sizeof(uart));
 
 	if (share_irqs)
@@ -1097,9 +1099,6 @@ static int __init serial8250_init(void)
 					"%d ports, IRQ sharing %sabled\n", 
 					nr_uarts, share_irqs ? "en" : "dis");
 
-	pr_info("Phil: %s --> show GPMC version\n", __func__);
-//	gpmc_show_revision();
-
 #ifdef CONFIG_SPARC
 	ret = sunserial_register_minors(&serial8250_reg, UART_NR);
 #else
@@ -1110,10 +1109,10 @@ static int __init serial8250_init(void)
 		goto out;
 
 	ret = serial8250_pnp_init();
-	if (ret)
-		goto unreg_uart_drv;
+	if (ret) goto unreg_uart_drv;
 
-	serial8250_isa_devs = platform_device_alloc("serial8250",
+	serial8250_isa_devs = platform_device_alloc(
+							"serial8250",
 						    PLAT8250_DEV_LEGACY);
 	if (!serial8250_isa_devs) {
 		ret = -ENOMEM;
@@ -1121,14 +1120,12 @@ static int __init serial8250_init(void)
 	}
 
 	ret = platform_device_add(serial8250_isa_devs);
-	if (ret)
-		goto put_dev;
+	if (ret) goto put_dev;
 
 	serial8250_register_ports(&serial8250_reg, &serial8250_isa_devs->dev);
 
 	ret = platform_driver_register(&serial8250_isa_driver);
-	if (ret == 0)
-		goto out;
+	if (ret == 0) goto out;
 
 	platform_device_del(serial8250_isa_devs);
 put_dev:

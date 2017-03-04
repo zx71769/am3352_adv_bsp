@@ -1990,10 +1990,8 @@ static int gpmc_probe_generic_child(struct platform_device *pdev,
 	 * REVISIT: Add timing support from slls644g.pdf.
 	 */
 	if (!gpmc_t.cs_rd_off) {
-		WARN(1, "enable GPMC debug to configure .dts timings for CS%i\n",
-			cs);
-		gpmc_cs_show_timings(cs,
-				     "please add GPMC bootloader timings to .dts");
+		WARN(1, "enable GPMC debug to configure .dts timings for CS%i\n", cs);
+		gpmc_cs_show_timings(cs, "please add GPMC bootloader timings to .dts");
 		goto no_timings;
 	}
 
@@ -2285,6 +2283,8 @@ static int gpmc_probe(struct platform_device *pdev)
 	struct resource *res;
 	struct gpmc_device *gpmc;
 
+	pr_info("Phil: ==== %s ====\n", __func__);
+
 	gpmc = devm_kzalloc(&pdev->dev, sizeof(*gpmc), GFP_KERNEL);
 	if (!gpmc)
 		return -ENOMEM;
@@ -2418,16 +2418,17 @@ static struct platform_driver gpmc_driver = {
 
 static __init int gpmc_init(void)
 {
+	pr_info("Phil: ==== %s ====\n", __func__);
+
 	return platform_driver_register(&gpmc_driver);
 }
 
 static __exit void gpmc_exit(void)
 {
 	platform_driver_unregister(&gpmc_driver);
-
 }
 
-pure_initcall(gpmc_init);
+postcore_initcall(gpmc_init);
 module_exit(gpmc_exit);
 
 static struct omap3_gpmc_regs gpmc_context;

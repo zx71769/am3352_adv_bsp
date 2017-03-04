@@ -37,6 +37,7 @@
 
 #include <asm/irq.h>
 #include <asm/uaccess.h>
+#include <uapi/linux/serial_reg.h>
 
 /*
  * This is used to lock changes in serial line configuration.
@@ -2171,7 +2172,71 @@ int uart_resume_port(struct uart_driver *drv, struct uart_port *uport)
 
 	return 0;
 }
+#define UART_DLD 0x2
+static inline void adv_read_dvid(struct uart_port *port)
+{
+	unsigned char efr = 0;
+	unsigned char dld = 0;
+	unsigned char lcr = 0;
+	unsigned char dll = 0;
+	unsigned char dlm = 0;
+	unsigned char dvid = 0;
+	unsigned char tmp1 = 0;
+	unsigned char tmp2 = 0;
 
+	pr_info("Phil: ==== Ready to read UART vendor ID ====\n");
+
+	lcr = serial_port_in(port, UART_LCR);
+	printk("lcr = %x\n", lcr);
+	serial_port_out(port, UART_LCR, 0x80);
+	mb();
+	tmp1 = serial_port_in(port, UART_LCR);
+	printk("phil set lcr 0x80 = 0x%0X\n", tmp1);
+	
+	serial_port_out(port, UART_LCR, 0x00);
+	mb();
+	tmp1 = serial_port_in(port, UART_LCR);
+	printk("phil set lcr 0x00 = 0x%0X\n", tmp1);
+
+	serial_port_out(port, UART_LCR, 0x80);
+	mb();
+	tmp1 = serial_port_in(port, UART_LCR);
+	printk("phil set2 lcr 0x80 = 0x%0X\n", tmp1);
+
+	serial_port_out(port, UART_LCR, 0xBF);
+	mb();
+	tmp1 = serial_port_in(port, UART_LCR);
+	printk("setting oxbf LCR = %x\n", tmp1);
+
+	
+	efr = serial_port_in(port, UART_EFR);
+	serial_port_out(port, UART_EFR, (efr|0x10));
+
+	serial_port_out(port, UART_LCR, 0x80);
+	tmp1 = serial_port_in(port, UART_LCR);
+	printk("adding 0x80 LCR = %x\n", tmp1);
+	dld = serial_port_in(port, UART_DLD);
+	serial_port_out(port, UART_DLD, (dld|0xC0));
+
+	dll = serial_port_in(port, UART_DLL);
+	dlm = serial_port_in(port, UART_DLM);
+	serial_port_out(port, UART_DLL, 0x00);
+	serial_port_out(port, UART_DLM, 0x00);
+	tmp1 = serial_port_in(port, UART_DLL);
+	tmp2 = serial_port_in(port, UART_DLM);
+	
+	pr_info("Check DLL = 0x%0X, DLM = 0x%0X\n", tmp1, tmp2);
+
+	dvid = serial_port_in(port, UART_EXAR_DVID);
+	pr_info("Phil: ==== Vendor ID 0x%0X ====\n", dvid);
+	
+	serial_port_out(port, UART_DLL, dll);
+	serial_port_out(port, UART_DLM, dlm);
+	serial_port_out(port, UART_LCR, lcr);
+	tmp1 = serial_port_in(port, UART_LCR);
+	printk("recover LCR = %x\n", tmp1);
+}
+#undef UART_DLD
 static inline void
 uart_report_port(struct uart_driver *drv, struct uart_port *port)
 {
@@ -2204,11 +2269,16 @@ uart_report_port(struct uart_driver *drv, struct uart_port *port)
 	       drv->dev_name,
 	       drv->tty_driver->name_base + port->line,
 	       address, port->irq, port->uartclk / 16, uart_type(port));
+
+	/* ignore ttyS0 */
+	if(drv->tty_driver->name_base + port->line){	
+		adv_read_dvid(port);
+	}
 }
 
-static void
-uart_configure_port(struct uart_driver *drv, struct uart_state *state,
-		    struct uart_port *port)
+static void uart_configure_port(struct uart_driver *drv, 
+								struct uart_state *state,
+		    					struct uart_port *port)
 {
 	unsigned int flags;
 
@@ -2217,7 +2287,6 @@ uart_configure_port(struct uart_driver *drv, struct uart_state *state,
 	 */
 	if (!port->iobase && !port->mapbase && !port->membase)
 		return;
-
 	/*
 	 * Now do the auto configuration stuff.  Note that config_port
 	 * is expected to claim the resources and map the port for us.
@@ -2240,7 +2309,6 @@ uart_configure_port(struct uart_driver *drv, struct uart_state *state,
 
 		/* Power up port for set_mctrl() */
 		uart_change_pm(state, UART_PM_STATE_ON);
-
 		/*
 		 * Ensure that the modem control lines are de-activated.
 		 * keep the DTR setting that is set in uart_set_options()
@@ -2249,7 +2317,6 @@ uart_configure_port(struct uart_driver *drv, struct uart_state *state,
 		spin_lock_irqsave(&port->lock, flags);
 		port->ops->set_mctrl(port, port->mctrl & TIOCM_DTR);
 		spin_unlock_irqrestore(&port->lock, flags);
-
 		/*
 		 * If this driver supports console, and it hasn't been
 		 * successfully registered yet, try to re-register it.
@@ -2257,7 +2324,6 @@ uart_configure_port(struct uart_driver *drv, struct uart_state *state,
 		 */
 		if (port->cons && !(port->cons->flags & CON_ENABLED))
 			register_console(port->cons);
-
 		/*
 		 * Power down all ports by default, except the
 		 * console if we have one.
@@ -2269,7 +2335,8 @@ uart_configure_port(struct uart_driver *drv, struct uart_state *state,
 
 #ifdef CONFIG_CONSOLE_POLL
 
-static int uart_poll_init(struct tty_driver *driver, int line, char *options)
+static int uart_poll_init(struct tty_driver *driver, 
+						int line, char *options)
 {
 	struct uart_driver *drv = driver->driver_state;
 	struct uart_state *state = drv->state + line;

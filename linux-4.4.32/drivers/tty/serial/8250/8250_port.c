@@ -883,12 +883,11 @@ static void autoconfig_16550a(struct uart_8250_port *up)
 		if (status1 == 0x82 || status1 == 0x84 || status1 == 0x88) {
 			DEBUG_AUTOCONF("Exar XR17V35x ");
 			up->port.type = PORT_XR17V35X;
-			up->capabilities |= UART_CAP_AFE | UART_CAP_EFR |
-						UART_CAP_SLEEP;
-
+			up->capabilities |= UART_CAP_AFE | 
+								UART_CAP_EFR | 
+								UART_CAP_SLEEP;
 			return;
 		}
-
 	}
 
 	/*

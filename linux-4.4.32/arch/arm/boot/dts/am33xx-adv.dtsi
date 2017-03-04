@@ -26,7 +26,7 @@
 		serial2 = &uart2;
 		serial3 = &uart3;
 		serial4 = &uart4;
-		serial5 = &uart5;
+		serial5 = &uart5; 
 		d_can0 = &dcan0;
 		d_can1 = &dcan1;
 		usb0 = &usb0;
@@ -379,7 +379,7 @@
 			dmas = <&edma 30 0>, <&edma 31 0>;
 			dma-names = "tx", "rx";
 		};
-
+		
 		uart3: serial@481a6000 {
 			compatible = "ti,am3352-uart", "ti,omap3-uart";
 			ti,hwmods = "uart4";
@@ -406,7 +406,7 @@
 			interrupts = <46>;
 			status = "disabled";
 		};
-
+		
 		i2c0: i2c@44e0b000 {
 			compatible = "ti,omap4-i2c";
 			#address-cells = <1>;
@@ -629,7 +629,6 @@
 			dma-names = "tx0", "rx0", "tx1", "rx1";
 			status = "disabled";
 		};
-
 		usb: usb@47400000 {
 			compatible = "ti,am33xx-usb";
 			reg = <0x47400000 0x1000>;
