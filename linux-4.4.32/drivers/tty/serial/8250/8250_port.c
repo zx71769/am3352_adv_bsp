@@ -41,6 +41,9 @@
 #include <asm/io.h>
 #include <asm/irq.h>
 
+#include <linux/gpio.h>
+#include <linux/of_gpio.h>
+
 #include "8250.h"
 
 /*
@@ -53,6 +56,16 @@
 #endif
 
 #define BOTH_EMPTY 	(UART_LSR_TEMT | UART_LSR_THRE)
+
+static inline void adv_mcr_loopback(struct uart_port *port)
+{
+	unsigned char mcr = 0;
+	
+	pr_info("Phil: ==== %s ====\n", __func__);
+	mcr = serial_port_in(port, UART_MCR);
+	pr_info("Phil: mcr = 0x%0X\n", mcr);
+	serial_port_out(port, UART_MCR, mcr|UART_MCR_LOOP);
+}
 
 /*
  * Here we define the default xmit fifo size used for each type of UART.
@@ -889,7 +902,6 @@ static void autoconfig_16550a(struct uart_8250_port *up)
 			return;
 		}
 	}
-
 	/*
 	 * Check for presence of the EFR when DLAB is set.
 	 * Only ST16C650V1 UARTs pass this test.
@@ -917,7 +929,6 @@ static void autoconfig_16550a(struct uart_8250_port *up)
 		serial_out(up, UART_EFR, 0);
 		return;
 	}
-
 	/*
 	 * Maybe it requires 0xbf to be written to the LCR.
 	 * (other ST16C650V2 UARTs, TI16C752A, etc)
@@ -1309,6 +1320,9 @@ static void serial8250_start_tx(struct uart_port *port)
 {
 	struct uart_8250_port *up = up_to_u8250p(port);
 
+	if(port->type == PORT_16550A)
+//		adv_mcr_loopback(port);
+
 	serial8250_rpm_get_tx(up);
 
 	if (up->dma && !up->dma->tx_dma(up))
@@ -1401,9 +1415,9 @@ serial8250_rx_chars(struct uart_8250_port *up, unsigned char lsr)
 	char flag;
 
 	do {
-		if (likely(lsr & UART_LSR_DR))
+		if (likely(lsr & UART_LSR_DR)){
 			ch = serial_in(up, UART_RX);
-		else
+		}else{
 			/*
 			 * Intel 82571 has a Serial Over Lan device that will
 			 * set UART_LSR_BI without setting UART_LSR_DR when
@@ -1412,6 +1426,7 @@ serial8250_rx_chars(struct uart_8250_port *up, unsigned char lsr)
 			 * just force the read character to be 0
 			 */
 			ch = 0;
+		}
 
 		flag = TTY_NORMAL;
 		port->icount.rx++;
@@ -1561,8 +1576,9 @@ int serial8250_handle_irq(struct uart_port *port, unsigned int iir)
 	DEBUG_INTR("status = %x...", status);
 
 	if (status & (UART_LSR_DR | UART_LSR_BI)) {
-		if (up->dma)
+		if (up->dma){
 			dma_err = up->dma->rx_dma(up, iir);
+		}
 
 		if (!up->dma || dma_err)
 			status = serial8250_rx_chars(up, status);
@@ -1795,7 +1811,6 @@ static void serial8250_put_poll_char(struct uart_port *port,
 	serial_port_out(port, UART_IER, ier);
 	serial8250_rpm_put(up);
 }
-
 #endif /* CONFIG_CONSOLE_POLL */
 
 int serial8250_do_startup(struct uart_port *port)
@@ -1903,6 +1918,10 @@ int serial8250_do_startup(struct uart_port *port)
 		serial_port_out(port, UART_TRG, UART_TRG_96);
 
 		serial_port_out(port, UART_LCR, 0);
+	}
+
+	if(port->type == PORT_16550A){
+//		adv_mcr_loopback(port);
 	}
 
 	if (port->irq) {
@@ -2053,6 +2072,7 @@ static int serial8250_startup(struct uart_port *port)
 {
 	if (port->startup)
 		return port->startup(port);
+
 	return serial8250_do_startup(port);
 }
 
@@ -2448,6 +2468,50 @@ static unsigned int serial8250_port_size(struct uart_8250_port *pt)
 }
 
 /*
+ * The GPIO to set exar uart chip mode
+ * 0 : rs422/485	
+ * 1 : rs232
+*/
+static int adv_gpio_sel(struct device_node *np, struct uart_port *port)
+{
+	int ret;
+	int gpio;
+	enum of_gpio_flags flags;
+
+	pr_info("Phil: ==== %s ====\n", __func__);
+	
+	if(!np){
+		pr_info("Phil: No device tree node!\n");
+		return -1;
+	}
+
+	gpio = of_get_named_gpio_flags(np, "mode-sel-gpio", 0, &flags);
+	if(!gpio_is_valid(gpio)){
+		pr_err("Cannot find %s GPIO defined!\n", np->name);
+		return -1;
+	}
+	//get request for the gpio
+	ret = devm_gpio_request(port->dev, gpio, "exar_uart_sel");
+	if(ret < 0){
+		pr_err("%s: GPIO(%d) request failed!\n", np->name, gpio);
+		return ret;
+	}
+	ret = gpio_direction_output(gpio, 1);	//set the gpio as high
+	if(ret < 0){
+		pr_err("%s: GPIO(%d) set high failed!\n", np->name, gpio);
+		return ret;
+	}
+	pr_info("%s: GPIO(%d) is %d\n", np->name, gpio, 
+						gpio_get_value_cansleep(gpio));
+	if(gpio_export(gpio, 1)){
+		pr_info("%s: GPIO(%d) export failed!\n", np->name, gpio);
+		return -1;
+	}
+
+	return 0;
+}
+
+/*
  * Resource handling.
  */
 static int serial8250_request_std_resource(struct uart_8250_port *up)
@@ -2469,6 +2533,7 @@ static int serial8250_request_std_resource(struct uart_8250_port *up)
 			ret = -EBUSY;
 			break;
 		}
+		pr_info("mapbase = 0x%0X\n", port->mapbase);
 
 		if (port->flags & UPF_IOREMAP) {
 			port->membase = ioremap_nocache(port->mapbase, size);
@@ -2477,6 +2542,9 @@ static int serial8250_request_std_resource(struct uart_8250_port *up)
 				ret = -ENOMEM;
 			}
 		}
+		/* try to do gpio things */
+		if(port->type == PORT_16550A)
+			adv_gpio_sel(port->dev->of_node, port);
 		break;
 
 	case UPIO_HUB6:

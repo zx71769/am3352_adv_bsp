@@ -1597,7 +1597,7 @@ static int uart_open(struct tty_struct *tty, struct file *filp)
 	struct uart_state *state = drv->state + line;
 	struct tty_port *port = &state->port;
 
-	pr_debug("uart_open(%d) called\n", line);
+	if(line) pr_info("uart_open(%d) called\n", line);
 
 	spin_lock_irq(&port->lock);
 	++port->count;
@@ -1637,6 +1637,8 @@ static int uart_open(struct tty_struct *tty, struct file *filp)
 	mutex_unlock(&port->mutex);
 	if (retval == 0)
 		retval = tty_port_block_til_ready(port, tty, filp);
+
+//	if(port)
 
 end:
 	return retval;
@@ -2172,49 +2174,34 @@ int uart_resume_port(struct uart_driver *drv, struct uart_port *uport)
 
 	return 0;
 }
+
 #define UART_DLD 0x2
-static inline void adv_read_dvid(struct uart_port *port)
+static inline void adv_read_serial_dvid(struct uart_port *port)
 {
+	unsigned int data;
 	unsigned char efr = 0;
 	unsigned char dld = 0;
 	unsigned char lcr = 0;
 	unsigned char dll = 0;
 	unsigned char dlm = 0;
 	unsigned char dvid = 0;
-	unsigned char tmp1 = 0;
-	unsigned char tmp2 = 0;
 
 	pr_info("Phil: ==== Ready to read UART vendor ID ====\n");
+	/* clean the trash data */
+	while((serial_port_in(port, UART_LSR) & UART_LSR_DR)){
+		data = port->serial_in(port, UART_RX);
+		pr_info("The trash data: 0x%0X\n", data);
+	}
 
 	lcr = serial_port_in(port, UART_LCR);
-	printk("lcr = %x\n", lcr);
-	serial_port_out(port, UART_LCR, 0x80);
-	mb();
-	tmp1 = serial_port_in(port, UART_LCR);
-	printk("phil set lcr 0x80 = 0x%0X\n", tmp1);
-	
-	serial_port_out(port, UART_LCR, 0x00);
-	mb();
-	tmp1 = serial_port_in(port, UART_LCR);
-	printk("phil set lcr 0x00 = 0x%0X\n", tmp1);
-
-	serial_port_out(port, UART_LCR, 0x80);
-	mb();
-	tmp1 = serial_port_in(port, UART_LCR);
-	printk("phil set2 lcr 0x80 = 0x%0X\n", tmp1);
-
 	serial_port_out(port, UART_LCR, 0xBF);
-	mb();
-	tmp1 = serial_port_in(port, UART_LCR);
-	printk("setting oxbf LCR = %x\n", tmp1);
-
 	
 	efr = serial_port_in(port, UART_EFR);
-	serial_port_out(port, UART_EFR, (efr|0x10));
+	serial_port_out(port, UART_EFR, (efr|UART_EFR_ECB));
+	if(serial_port_in(port, UART_EFR) & UART_EFR_ECB)
+		pr_info("Set EFR to enhance mode\n");
 
 	serial_port_out(port, UART_LCR, 0x80);
-	tmp1 = serial_port_in(port, UART_LCR);
-	printk("adding 0x80 LCR = %x\n", tmp1);
 	dld = serial_port_in(port, UART_DLD);
 	serial_port_out(port, UART_DLD, (dld|0xC0));
 
@@ -2222,21 +2209,16 @@ static inline void adv_read_dvid(struct uart_port *port)
 	dlm = serial_port_in(port, UART_DLM);
 	serial_port_out(port, UART_DLL, 0x00);
 	serial_port_out(port, UART_DLM, 0x00);
-	tmp1 = serial_port_in(port, UART_DLL);
-	tmp2 = serial_port_in(port, UART_DLM);
-	
-	pr_info("Check DLL = 0x%0X, DLM = 0x%0X\n", tmp1, tmp2);
 
-	dvid = serial_port_in(port, UART_EXAR_DVID);
-	pr_info("Phil: ==== Vendor ID 0x%0X ====\n", dvid);
+	dvid = serial_port_in(port, 0x02);
+	pr_info("Phil: ==== DVID 0x%0X ====\n", dvid);
 	
 	serial_port_out(port, UART_DLL, dll);
 	serial_port_out(port, UART_DLM, dlm);
 	serial_port_out(port, UART_LCR, lcr);
-	tmp1 = serial_port_in(port, UART_LCR);
-	printk("recover LCR = %x\n", tmp1);
 }
 #undef UART_DLD
+
 static inline void
 uart_report_port(struct uart_driver *drv, struct uart_port *port)
 {
@@ -2269,11 +2251,6 @@ uart_report_port(struct uart_driver *drv, struct uart_port *port)
 	       drv->dev_name,
 	       drv->tty_driver->name_base + port->line,
 	       address, port->irq, port->uartclk / 16, uart_type(port));
-
-	/* ignore ttyS0 */
-	if(drv->tty_driver->name_base + port->line){	
-		adv_read_dvid(port);
-	}
 }
 
 static void uart_configure_port(struct uart_driver *drv, 
@@ -2331,6 +2308,13 @@ static void uart_configure_port(struct uart_driver *drv,
 		if (!uart_console(port))
 			uart_change_pm(state, UART_PM_STATE_OFF);
 	}
+	
+	/* ignore console */
+/*
+	if(port->type == PORT_16550A){	
+		adv_read_serial_dvid(port);
+	}
+*/
 }
 
 #ifdef CONFIG_CONSOLE_POLL

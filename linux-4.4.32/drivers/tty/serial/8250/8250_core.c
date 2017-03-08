@@ -829,6 +829,7 @@ static int serial8250_probe(struct platform_device *dev)
 		uart.port.pm		= p->pm;
 		uart.port.dev		= &dev->dev;
 		uart.port.irqflags	|= irqflag;
+	
 		ret = serial8250_register_8250_port(&uart);
 		if (ret < 0) {
 			dev_err(&dev->dev, "unable to register port at index %d "

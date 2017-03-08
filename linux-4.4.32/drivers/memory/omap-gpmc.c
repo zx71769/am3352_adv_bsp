@@ -2418,8 +2418,6 @@ static struct platform_driver gpmc_driver = {
 
 static __init int gpmc_init(void)
 {
-	pr_info("Phil: ==== %s ====\n", __func__);
-
 	return platform_driver_register(&gpmc_driver);
 }
 

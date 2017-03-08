@@ -21,7 +21,6 @@
 	
 	cpus {
 		cpu@0 {
-		/*	cpu0-supply = <&vdd1_reg>; */
 		};
 	};
 
@@ -29,96 +28,23 @@
 		device_type = "memory";
 		reg = <0x80000000 0x10000000>; /* 256 MB */
 	};
-/*
-	vbat: fixedregulator@0 {
-		compatible = "regulator-fixed";
-		regulator-name = "vbat";
-		regulator-min-microvolt = <5000000>;
-		regulator-max-microvolt = <5000000>;
-		regulator-boot-on;
-	};
-*/
+	
 	lis3_reg: fixedregulator@1 {
 		compatible = "regulator-fixed";
 		regulator-name = "lis3_reg";
 		regulator-boot-on;
 	};
-/*
-	vtt_fixed: fixedregulator@3 {
-		compatible = "regulator-fixed";
-		regulator-name = "vtt";
-		regulator-min-microvolt = <1500000>;
-		regulator-max-microvolt = <1500000>;
-		gpio = <&gpio0 7 GPIO_ACTIVE_HIGH>;
-		regulator-always-on;
-		regulator-boot-on;
-		enable-active-high;
-	};
-/***********************************************************/
-	leds {
-		pinctrl-names = "default";
-		pinctrl-0 = <&user_leds_s0>;
-
-		compatible = "gpio-leds";
-
-		led@1 {
-			label = "evmsk:green:usr0";
-			gpios = <&gpio1 4 GPIO_ACTIVE_HIGH>;
-			default-state = "off";
-		};
-
-		led@2 {
-			label = "evmsk:green:usr1";
-			gpios = <&gpio1 5 GPIO_ACTIVE_HIGH>;
-			default-state = "off";
-		};
-
-		led@3 {
-			label = "evmsk:green:mmc0";
-			gpios = <&gpio1 6 GPIO_ACTIVE_HIGH>;
-			linux,default-trigger = "mmc0";
-			default-state = "off";
-		};
-
-		led@4 {
-			label = "evmsk:green:heartbeat";
-			gpios = <&gpio1 7 GPIO_ACTIVE_HIGH>;
-			linux,default-trigger = "heartbeat";
-			default-state = "off";
-		};
-	};
-/*************************************************************/
 };
 
 &am33xx_pinmux {
 	pinctrl-names = "default";
-	pinctrl-0 = <&gpio_keys_s0 &clkout2_pin &ddr3_vtt_toggle &gpmc_pins>;
-/*	pinctrl-0 = <&clkout2_pin &ddr3_vtt_toggle &gpmc_pins>; */
-
+	pinctrl-0 = <&clkout2_pin &ddr3_vtt_toggle &gpmc_pins>;	
+	
 	ddr3_vtt_toggle: ddr3_vtt_toggle {
 		pinctrl-single,pins = <
 			0x164 (PIN_OUTPUT | MUX_MODE7)	/* ecap0_in_pwm0_out.gpio0_7 */
 		>;
 	};
-/**************************************************************************/
-	user_leds_s0: user_leds_s0 {
-		pinctrl-single,pins = <
-			0x10 (PIN_OUTPUT_PULLDOWN | MUX_MODE7)	// gpmc_ad4.gpio1_4
-			0x14 (PIN_OUTPUT_PULLDOWN | MUX_MODE7)	// gpmc_ad5.gpio1_5 
-			0x18 (PIN_OUTPUT_PULLDOWN | MUX_MODE7)	// gpmc_ad6.gpio1_6 
-			0x1c (PIN_OUTPUT_PULLDOWN | MUX_MODE7)	// gpmc_ad7.gpio1_7 
-		>;
-	};
-	
-	gpio_keys_s0: gpio_keys_s0 {
-		pinctrl-single,pins = <
-			0x94 (PIN_INPUT_PULLDOWN | MUX_MODE7)	// gpmc_oen_ren.gpio2_3
-			0x90 (PIN_INPUT_PULLDOWN | MUX_MODE7)	// gpmc_advn_ale.gpio2_2 
-			0x70 (PIN_INPUT_PULLDOWN | MUX_MODE7)	// gpmc_wait0.gpio0_30 
-			0x9c (PIN_INPUT_PULLDOWN | MUX_MODE7)	// gpmc_ben0_cle.gpio2_5 
-		>;
-	};
-/****************************************************************************/
 /*
 	i2c0_pins: pinmux_i2c0_pins {
 		pinctrl-single,pins = <
@@ -191,7 +117,7 @@
 		>;
 	};
 
-	gpmc_pins: gpmc_pins {
+	gpmc_pins: pinmux_gpmc_pins {
 		pinctrl-single,pins = <
 			/* The nand flash pins */
 			0x0 (PIN_INPUT_PULLUP | MUX_MODE0)	/* gpmc_ad0.gpmc_ad0 */
@@ -208,7 +134,7 @@
 			0x94 (PIN_OUTPUT | MUX_MODE0)		/* gpmc_oen_ren.gpmc_oen_ren */
 			0x98 (PIN_OUTPUT | MUX_MODE0)		/* gpmc_wen.gpmc_wen */
 			0x9c (PIN_OUTPUT | MUX_MODE0)		/* gpmc_be0n_cle.gpmc_be0n_cle */
-			/* The exar uart0 pins */
+			/* The exar uart0 & uart1 pins */
 			0x80 (PIN_OUTPUT | MUX_MODE0)		/* (U9) gpmc_csn1.gpmc_csn1 */
 			0x1b0 (PIN_INPUT | MUX_MODE0)		/* (A15) xdma_event_intr0, INT0 */
 			0x1b4 (PIN_INPUT | MUX_MODE0)		/* (D14) xdma_event_intr1, INT1 */
@@ -216,7 +142,7 @@
 			0x28 (PIN_OUTPUT | MUX_MODE7)		/* (T11) gpio0[26], LD_SEL1 */
 			0xa0 (PIN_OUTPUT | MUX_MODE1)		/* (R1) gpmca0, SMI_Addr0 */
 			0xa4 (PIN_OUTPUT | MUX_MODE1)		/* (R2) gpmca1, SMI_Addr1 */
-			/* The exar uart1 pins */
+			/* The exar uart2 & uart3 pins */
 			0x84 (PIN_OUTPUT | MUX_MODE0)		/* (V9) gpmc_csn2.gpmc_csn2 */
 			0x44 (PIN_INPUT | MUX_MODE6)		/* (U14) epwm0int, INT2 */
 			0x48 (PIN_INPUT | MUX_MODE6)		/* (V14) epwm1int, INT3 */
@@ -335,33 +261,28 @@
 		};
 	};
 	
-	exar_uart@1,0 {
-		compatible = "exar,16m890";
+	exar_controller_0@1,0 {
 		reg = <1 0 0x01000000>;
+/*
+		device_type = "serial";
+		compatible = "exar,16m890";
 		fifo-size = <128>;
 		interrupt-parent = <&intc>;
 		interrupts = <123>;
-		clock-frequency = <3686400>;
-		bank-width = <1>;
-	
+		clock-frequency = <29491200>;
+		mode-sel-gpio = <&gpio0 27 GPIO_ACTIVE_HIGH>; 
+*/
+		/* 232/422/485 mode sel */
 		#address-cells = <1>;
-		#size-cells = <1>;
+		#size-cells = <1>;	/* allow CS address passing */
 		gpmc,device-width = <1>;	/* 8-bit data width */
+		bank-width = <1>;
 
 		gpmc,mux-add-data;		
-		gpmc,cs-on-ns = <0>; 		/* Assertion time */
-		gpmc,cs-rd-off-ns = <186> ; /* Read deassertion time */
-		gpmc,cs-wr-off-ns = <186>; 	/* Write deassertion time */
-
-		gpmc,adv-on-ns = <12>;
-		gpmc,adv-rd-off-ns = <48>;
-		gpmc,adv-wr-off-ns = <48>;
-
-		gpmc,oe-on-ns = <54>;
-		gpmc,oe-off-ns = <168>;
-		gpmc,we-on-ns = <54>;
-		gpmc,we-off-ns = <168>;
-
+		gpmc,cs-on-ns = <0>; 		
+		gpmc,cs-rd-off-ns = <186>; 
+		gpmc,cs-wr-off-ns = <186>; 
+		
 		gpmc,rd-cycle-ns = <186>;
 		gpmc,wr-cycle-ns = <186>;
 		gpmc,access-ns = <114>;
@@ -371,35 +292,33 @@
 		gpmc,wr-access-ns = <186>;
 		gpmc,cycle2cycle-samecsen;
 		gpmc,cycle2cycle-diffcsen;
+
+		gpmc,we-off-ns = <200>;
+		gpmc,we-on-ns = <20>;
+		gpmc,oe-off-ns = <140>;
+		gpmc,oe-on-ns = <20>;
     };
-	
-	exar_uart@2,0 {
+/*	
+	exar_controller_1@2,0 {
+		device_type = "serial";
 		compatible = "exar,16m890";
 		reg = <2 0 0x01000000>;
 		fifo-size = <128>;
 		interrupt-parent = <&intc>;
 		interrupts = <124>;
-		clock-frequency = <3686400>;
-		bank-width = <1>;
+		mode-sel-gpio = <&gpio0 26 GPIO_ACTIVE_HIGH>;
+		clock-frequency = <29491200>;
 		
 		#address-cells = <1>;
 		#size-cells = <1>;
-		gpmc,device-width = <1>;	/* 8-bit data width */
-
+		gpmc,device-width = <1>;
+		bank-width = <1>;
+		
 		gpmc,mux-add-data;		
-		gpmc,cs-on-ns = <0>; 		/* Assertion time */
-		gpmc,cs-rd-off-ns = <186> ; /* Read deassertion time */
-		gpmc,cs-wr-off-ns = <186>; 	/* Write deassertion time */
-
-		gpmc,adv-on-ns = <12>;
-		gpmc,adv-rd-off-ns = <48>;
-		gpmc,adv-wr-off-ns = <48>;
-
-		gpmc,oe-on-ns = <54>;
-		gpmc,oe-off-ns = <168>;
-		gpmc,we-on-ns = <54>;
-		gpmc,we-off-ns = <168>;
-
+		gpmc,cs-on-ns = <0>; 		
+		gpmc,cs-rd-off-ns = <186>; 
+		gpmc,cs-wr-off-ns = <186>; 
+		
 		gpmc,rd-cycle-ns = <186>;
 		gpmc,wr-cycle-ns = <186>;
 		gpmc,access-ns = <114>;
@@ -409,7 +328,13 @@
 		gpmc,wr-access-ns = <186>;
 		gpmc,cycle2cycle-samecsen;
 		gpmc,cycle2cycle-diffcsen;
+
+		gpmc,we-off-ns = <200>;
+		gpmc,we-on-ns = <20>;
+		gpmc,oe-off-ns = <140>;
+		gpmc,oe-on-ns = <20>;
     };
+*/
 };
 
 /* PWM controller, remove it? */
@@ -423,92 +348,6 @@
 	};
 };
 
-/* wakeup m3 for TPS65910 */
-/*
-&wkup_m3_ipc {
-	ti,needs-vtt-toggle;
-	ti,vtt-gpio-pin = <7>;
-	ti,scale-data-fw = "am335x-evm-scale-data.bin";
-};
-*/
-/* TPS65910 Integrated Power Management IC */
-/*
-#include "tps65910.dtsi"
-&tps {
-	vcc1-supply = <&vbat>;
-	vcc2-supply = <&vbat>;
-	vcc3-supply = <&vbat>;
-	vcc4-supply = <&vbat>;
-	vcc5-supply = <&vbat>;
-	vcc6-supply = <&vbat>;
-	vcc7-supply = <&vbat>;
-	vccio-supply = <&vbat>;
-
-	regulators {
-		vrtc_reg: regulator@0 {
-			regulator-always-on;
-		};
-
-		vio_reg: regulator@1 {
-			regulator-always-on;
-		};
-
-		vdd1_reg: regulator@2 {
-			regulator-name = "vdd_mpu";
-			regulator-min-microvolt = <912500>;
-			regulator-max-microvolt = <1378000>;
-			regulator-boot-on;
-			regulator-always-on;
-		};
-
-		vdd2_reg: regulator@3 {
-			regulator-name = "vdd_core";
-			regulator-min-microvolt = <912500>;
-			regulator-max-microvolt = <1150000>;
-			regulator-boot-on;
-			regulator-always-on;
-		};
-
-		vdd3_reg: regulator@4 {
-			regulator-always-on;
-		};
-
-		vdig1_reg: regulator@5 {
-			regulator-always-on;
-		};
-
-		vdig2_reg: regulator@6 {
-			regulator-always-on;
-		};
-
-		vpll_reg: regulator@7 {
-			regulator-always-on;
-		};
-
-		vdac_reg: regulator@8 {
-			regulator-always-on;
-		};
-
-		vaux1_reg: regulator@9 {
-			regulator-always-on;
-		};
-
-		vaux2_reg: regulator@10 {
-			regulator-always-on;
-		};
-
-		vaux33_reg: regulator@11 {
-			regulator-always-on;
-		};
-
-		vmmc_reg: regulator@12 {
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <3300000>;
-			regulator-always-on;
-		};
-	};
-};
-*/
 &mac {
 	pinctrl-names = "default";
 	pinctrl-0 = <&cpsw_default>;
@@ -540,7 +379,6 @@
 
 &mmc1 {
 	status = "okay";
-/*	vmmc-supply = <&vmmc_reg>; */
 	bus-width = <4>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&mmc1_pins_default>;
@@ -572,3 +410,12 @@
 	pinctrl-0 = <&uart0_pins>;
 	status = "okay";
 };
+
+&exar_uart0 {
+	status = "okay";
+};
+
+&exar_uart1 {
+	status = "okay";
+};
+

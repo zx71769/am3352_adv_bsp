@@ -347,6 +347,28 @@
 			interrupts = <62>;
 		};
 
+		exar_uart0: serial@9000000 {
+			compatible = "exar,16m890";
+			clock-frequency = <29491200>;
+			reg = <0x09000000 0x07>;
+			fifo-size = <128>;
+			interrupt-parent = <&intc>;
+			interrupts = <123>;
+			mode-sel-gpio = <&gpio0 27 GPIO_ACTIVE_HIGH>;
+			status = "disabled"; 
+		};
+	
+		exar_uart1: serial@9000007 {
+			compatible = "exar,16m890";
+			clock-frequency = <29491200>;
+			reg = <0x09000008 0x07>;
+			fifo-size = <128>;
+			interrupt-parent = <&intc>;
+			interrupts = <124>;
+			mode-sel-gpio = <&gpio0 26 GPIO_ACTIVE_HIGH>;
+			status = "disabled"; 
+		};
+
 		uart0: serial@44e09000 {
 			compatible = "ti,am3352-uart", "ti,omap3-uart";
 			ti,hwmods = "uart1";

@@ -63,7 +63,6 @@ void (*arm_pm_idle)(void);
 /*
  * Called from the core idle loop.
  */
-
 void arch_cpu_idle(void)
 {
 	if (arm_pm_idle)
