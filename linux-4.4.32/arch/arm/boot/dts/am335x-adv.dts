@@ -103,7 +103,7 @@
 		 * reference by TRM 25.3.3
 		*/
 		interrupt-parent = <&gpio1>;
-		interrupts = <17 GPIO_ACTIVE_LOW>; /* V14 */
+		interrupts = <17 IRQ_TYPE_LEVEL_HIGH>; /* V14 */
 		/* 
 		 * self implement:
 		 * 232/422/485 mode select
@@ -128,7 +128,7 @@
 		 * reference by TRM 25.3.3
 		*/
 		interrupt-parent = <&gpio1>;
-		interrupts = <18 GPIO_ACTIVE_LOW>; /* U14 */
+		interrupts = <18 IRQ_TYPE_LEVEL_HIGH>; /* U14 */
 		/* 
 		 * self implement:
 		 * 232/422/485 mode select
@@ -140,7 +140,7 @@
 
 &am33xx_pinmux {
 	pinctrl-names = "default";
-	pinctrl-0 = <&clkout2_pin &ddr3_vtt_toggle &gpmc_pins>;	
+	pinctrl-0 = <&ddr3_vtt_toggle &gpmc_pins>;
 	
 	ddr3_vtt_toggle: ddr3_vtt_toggle {
 		pinctrl-single,pins = <
@@ -148,18 +148,6 @@
 		>;
 	};
 	
-	clkout2_pin: pinmux_clkout2_pin {
-		pinctrl-single,pins = <
-			0x1b4 (PIN_OUTPUT_PULLDOWN | MUX_MODE3)	/* xdma_event_intr1.clkout2 */
-		>;
-	};
-
-	ecap2_pins_default: backlight_pins {
-		pinctrl-single,pins = <
-			0x19c 0x4	/* mcasp0_ahclkr.ecap2_in_pwm2_out MODE4 */
-		>;
-	};
-
 	cpsw_default: cpsw_default {
 		pinctrl-single,pins = <
 			/* Slave 1 */
@@ -202,7 +190,6 @@
 			0x160 (PIN_INPUT | MUX_MODE7)			/* spi0_cs1.gpio0_6 */
 		>;
 	};
-	
 	/* The console */
 	uart0_pins: pinmux_uart0_pins {
 		pinctrl-single,pins = <
@@ -246,7 +233,6 @@
 			0xac (PIN_OUTPUT | MUX_MODE1)		/* (R4) gpmca3, SMI_Addr3 */
 		>;
 	};
-
 };
 
 &elm{
@@ -397,17 +383,6 @@
 		gpmc,oe-off-ns = <140>;
 		gpmc,oe-on-ns = <20>;
     };
-};
-
-/* PWM controller, remove it? */
-&epwmss2 {
-	status = "okay";
-
-	ecap2: ecap@48304100 {
-		status = "okay";
-		pinctrl-names = "default";
-		pinctrl-0 = <&ecap2_pins_default>;
-	};
 };
 
 &mac {

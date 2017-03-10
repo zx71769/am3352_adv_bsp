@@ -2493,10 +2493,12 @@ static int adv_gpio_sel(struct device_node *np, struct uart_port *port)
 		pr_err("%s: GPIO(%d) set high failed!\n", np->name, gpio);
 		return ret;
 	}
-	pr_info("%s: GPIO(%d) is %d\n", np->name, gpio, 
-						gpio_get_value_cansleep(gpio));
+
+	pr_info("%s set to %s mode\n", np->name,
+			gpio_get_value_cansleep(gpio)? "rs232" : "rs422/485");
+	
 	if(gpio_export(gpio, 1)){
-		pr_info("%s: GPIO(%d) export failed!\n", np->name, gpio);
+		pr_err("%s: GPIO(%d) export failed!\n", np->name, gpio);
 		return -1;
 	}
 
