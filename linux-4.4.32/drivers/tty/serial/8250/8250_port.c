@@ -61,9 +61,8 @@ static inline void adv_mcr_loopback(struct uart_port *port)
 {
 	unsigned char mcr = 0;
 	
-	pr_info("Phil: ==== %s ====\n", __func__);
+	pr_info("Phil: ==== Start loopback test ====\n");
 	mcr = serial_port_in(port, UART_MCR);
-	pr_info("Phil: mcr = 0x%0X\n", mcr);
 	serial_port_out(port, UART_MCR, mcr|UART_MCR_LOOP);
 }
 
@@ -1623,7 +1622,8 @@ static int exar_handle_irq(struct uart_port *port)
 	ret = serial8250_handle_irq(port, iir);
 
 	if ((port->type == PORT_XR17V35X) ||
-	   (port->type == PORT_XR17D15X)) {
+		(port->type == PORT_XR17D15X))
+	{
 		int0 = serial_port_in(port, 0x80);
 		int1 = serial_port_in(port, 0x81);
 		int2 = serial_port_in(port, 0x82);
@@ -1752,13 +1752,11 @@ static void wait_for_xmitr(struct uart_8250_port *up, int bits)
 		}
 	}
 }
-
 #ifdef CONFIG_CONSOLE_POLL
 /*
  * Console polling routines for writing and reading from the uart while
  * in an interrupt or debug context.
  */
-
 static int serial8250_get_poll_char(struct uart_port *port)
 {
 	struct uart_8250_port *up = up_to_u8250p(port);
@@ -1780,9 +1778,8 @@ out:
 	return status;
 }
 
-
-static void serial8250_put_poll_char(struct uart_port *port,
-			 unsigned char c)
+static void serial8250_put_poll_char(struct uart_port *port, 
+									unsigned char c)
 {
 	unsigned int ier;
 	struct uart_8250_port *up = up_to_u8250p(port);
@@ -1894,9 +1891,10 @@ int serial8250_do_startup(struct uart_port *port)
 	 * here.
 	 */
 	if (!(port->flags & UPF_BUGGY_UART) &&
-	    (serial_port_in(port, UART_LSR) == 0xff)) {
+	    (serial_port_in(port, UART_LSR) == 0xff)) 
+	{
 		printk_ratelimited(KERN_INFO "ttyS%d: LSR safety check engaged!\n",
-				   serial_index(port));
+						   serial_index(port));
 		retval = -ENODEV;
 		goto out;
 	}
@@ -1918,10 +1916,6 @@ int serial8250_do_startup(struct uart_port *port)
 		serial_port_out(port, UART_TRG, UART_TRG_96);
 
 		serial_port_out(port, UART_LCR, 0);
-	}
-
-	if(port->type == PORT_16550A){
-//		adv_mcr_loopback(port);
 	}
 
 	if (port->irq) {
@@ -2477,11 +2471,9 @@ static int adv_gpio_sel(struct device_node *np, struct uart_port *port)
 	int ret;
 	int gpio;
 	enum of_gpio_flags flags;
-
-	pr_info("Phil: ==== %s ====\n", __func__);
 	
 	if(!np){
-		pr_info("Phil: No device tree node!\n");
+		pr_err("%s: No device tree node!\n", __func__);
 		return -1;
 	}
 
@@ -2533,7 +2525,6 @@ static int serial8250_request_std_resource(struct uart_8250_port *up)
 			ret = -EBUSY;
 			break;
 		}
-		pr_info("mapbase = 0x%0X\n", port->mapbase);
 
 		if (port->flags & UPF_IOREMAP) {
 			port->membase = ioremap_nocache(port->mapbase, size);

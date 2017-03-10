@@ -679,7 +679,7 @@ static void uart_unthrottle(struct tty_struct *tty)
 }
 
 static void do_uart_get_info(struct tty_port *port,
-			struct serial_struct *retinfo)
+							struct serial_struct *retinfo)
 {
 	struct uart_state *state = container_of(port, struct uart_state, port);
 	struct uart_port *uport = state->uart_port;
@@ -1597,12 +1597,9 @@ static int uart_open(struct tty_struct *tty, struct file *filp)
 	struct uart_state *state = drv->state + line;
 	struct tty_port *port = &state->port;
 
-	if(line) pr_info("uart_open(%d) called\n", line);
-
 	spin_lock_irq(&port->lock);
 	++port->count;
 	spin_unlock_irq(&port->lock);
-
 	/*
 	 * We take the semaphore here to guarantee that we won't be re-entered
 	 * while allocating the state structure, or while we request any IRQs
@@ -2245,12 +2242,13 @@ uart_report_port(struct uart_driver *drv, struct uart_port *port)
 		break;
 	}
 
-	printk(KERN_INFO "%s%s%s%d at %s (irq = %d, base_baud = %d) is a %s\n",
-	       port->dev ? dev_name(port->dev) : "",
-	       port->dev ? ": " : "",
-	       drv->dev_name,
-	       drv->tty_driver->name_base + port->line,
-	       address, port->irq, port->uartclk / 16, uart_type(port));
+	pr_info("Advantech custom board: %s%s%s%d at %s (irq = %d"
+			", base_baud = %d) is a %s\n",
+			port->dev ? dev_name(port->dev) : "",
+	       	port->dev ? ": " : "",
+	       	drv->dev_name,
+	       	drv->tty_driver->name_base + port->line,
+	       	address, port->irq, port->uartclk / 16, uart_type(port));
 }
 
 static void uart_configure_port(struct uart_driver *drv, 
@@ -2746,7 +2744,9 @@ int uart_add_one_port(struct uart_driver *drv, struct uart_port *uport)
 	 * If this port is a console, then the spinlock is already
 	 * initialised.
 	 */
-	if (!(uart_console(uport) && (uport->cons->flags & CON_ENABLED))) {
+	if (!(uart_console(uport) && 
+		(uport->cons->flags & CON_ENABLED))) 
+	{
 		spin_lock_init(&uport->lock);
 		lockdep_set_class(&uport->lock, &port_lock_key);
 	}
@@ -2773,8 +2773,12 @@ int uart_add_one_port(struct uart_driver *drv, struct uart_port *uport)
 	 * Register the port whether it's detected or not.  This allows
 	 * setserial to be used to alter this port's parameters.
 	 */
-	tty_dev = tty_port_register_device_attr(port, drv->tty_driver,
-			uport->line, uport->dev, port, uport->tty_groups);
+	tty_dev = tty_port_register_device_attr(port, 
+											drv->tty_driver,
+											uport->line,
+											uport->dev, 
+											port, 
+											uport->tty_groups);
 	if (likely(!IS_ERR(tty_dev))) {
 		device_set_wakeup_capable(tty_dev, 1);
 	} else {

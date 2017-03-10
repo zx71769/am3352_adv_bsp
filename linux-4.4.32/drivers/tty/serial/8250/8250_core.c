@@ -797,13 +797,13 @@ void serial8250_resume_port(int line)
  */
 static int serial8250_probe(struct platform_device *dev)
 {
-	struct plat_serial8250_port *p = dev_get_platdata(&dev->dev);
+	struct plat_serial8250_port *p;
 	struct uart_8250_port uart;
 	int ret, i, irqflag = 0;
 
-	pr_info("Phil: ==== %s ====\n", __func__);
-
 	memset(&uart, 0, sizeof(uart));
+	/* To parser the uart device tree */
+	p = dev_get_platdata(&dev->dev);
 
 	if (share_irqs)
 		irqflag = IRQF_SHARED;

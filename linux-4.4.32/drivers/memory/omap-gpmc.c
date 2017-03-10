@@ -1980,9 +1980,10 @@ static int gpmc_probe_generic_child(struct platform_device *pdev,
 		return ret;
 	}
 	gpmc_cs_set_name(cs, child->name);
-
 	gpmc_read_settings_dt(child, &gpmc_s);
 	gpmc_read_timings_dt(child, &gpmc_t);
+
+	pr_info("GPMC [%s]chip-select %d request success!\n", child->name, cs);
 
 	/*
 	 * For some GPMC devices we still need to rely on the bootloader
@@ -2056,7 +2057,7 @@ static int gpmc_probe_generic_child(struct platform_device *pdev,
 		gpmc_s.device_nand = true;
 	} else {
 		ret = of_property_read_u32(child, "bank-width",
-					   &gpmc_s.device_width);
+					 		 	 &gpmc_s.device_width);
 		if (ret < 0)
 			goto err;
 	}
@@ -2282,8 +2283,6 @@ static int gpmc_probe(struct platform_device *pdev)
 	int rc;
 	struct resource *res;
 	struct gpmc_device *gpmc;
-
-	pr_info("Phil: ==== %s ====\n", __func__);
 
 	gpmc = devm_kzalloc(&pdev->dev, sizeof(*gpmc), GFP_KERNEL);
 	if (!gpmc)

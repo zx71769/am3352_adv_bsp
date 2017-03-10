@@ -286,14 +286,16 @@ EXPORT_SYMBOL_GPL(of_irq_parse_raw);
  * finding which interrupt controller node it is attached to, and returning the
  * interrupt specifier that can be used to retrieve a Linux IRQ number.
  */
-int of_irq_parse_one(struct device_node *device, int index, struct of_phandle_args *out_irq)
+int of_irq_parse_one(struct device_node *device, int index, 
+							struct of_phandle_args *out_irq)
 {
 	struct device_node *p;
 	const __be32 *intspec, *tmp, *addr;
 	u32 intsize, intlen;
 	int i, res;
 
-	pr_debug("of_irq_parse_one: dev=%s, index=%d\n", of_node_full_name(device), index);
+	pr_debug("of_irq_parse_one: dev=%s, index=%d\n", 
+						of_node_full_name(device), index);
 
 	/* OldWorld mac stuff is "special", handle out of line */
 	if (of_irq_workarounds & OF_IMAP_OLDWORLD_MAC)
@@ -304,7 +306,8 @@ int of_irq_parse_one(struct device_node *device, int index, struct of_phandle_ar
 
 	/* Try the new-style interrupts-extended first */
 	res = of_parse_phandle_with_args(device, "interrupts-extended",
-					"#interrupt-cells", index, out_irq);
+												"#interrupt-cells", 
+												index, out_irq);
 	if (!res)
 		return of_irq_parse_raw(addr, out_irq);
 

@@ -174,6 +174,10 @@ int dt_init_idle_driver(struct cpuidle_driver *drv,
 		if (!state_node)
 			break;
 
+		if (of_property_read_bool(cpu_node, "cpu-idle-disabled")){
+			break;
+		}
+	
 		if (!of_device_is_available(state_node))
 			continue;
 

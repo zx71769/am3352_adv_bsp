@@ -11,7 +11,7 @@
 
 /dts-v1/;
 
-#include "am33xx-adv.dtsi"
+#include "am33xx.dtsi"
 #include <dt-bindings/pwm/pwm.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 
@@ -20,7 +20,8 @@
 	compatible = "ti,am335x-evmsk", "ti,am33xx";
 	
 	cpus {
-		cpu@0 {
+		cpu@0 { 
+			cpu-idle-disabled; /* force cpu idle disable */
 		};
 	};
 
@@ -34,6 +35,107 @@
 		regulator-name = "lis3_reg";
 		regulator-boot-on;
 	};
+
+	/**
+	 * The exar uart node define:
+	 * use 16550A driver
+	*/
+	exar_uart0: exar_uart0@9000000 {
+		device_type = "serial";
+		compatible = "exar,16m890";
+		/*
+		 * use GPMC cs1 base memory(0x9000000)
+		 * size 0x07 (only 3 bit)
+		*/
+		reg = <0x09000000 0x07>;
+		clock-frequency = <29491200>;
+		interrupt-parent = <&intc>;
+		/*
+		 * reference by  ti-am335x TRM:
+		 * 6.3 ARM cortex-A8 interrupt table
+		*/
+		interrupts = <123>; /* A15 */
+		/* 
+		 * self implement:
+		 * 232/422/485 mode select
+		*/
+		mode-sel-gpio = <&gpio0 27 GPIO_ACTIVE_HIGH>; /* U12 */
+		status = "okay"; 
+	};
+	
+	exar_uart1: exar_uart1@9000008 {
+		device_type = "serial";
+		compatible = "exar,16m890";
+		/*
+		 * use GPMC cs1 base memory(0x9000008)
+		 * size 0x07 (only 3 bit)
+		*/
+		reg = <0x09000008 0x07>;
+		clock-frequency = <29491200>;
+		fifo-size = <128>;
+		interrupt-parent = <&intc>;
+		/*
+		 * reference by  ti-am335x TRM:
+		 * 6.3 ARM cortex-A8 interrupt table
+		*/
+		interrupts = <124>; /* A14 */
+		/* 
+		 * self implement:
+		 * 232/422/485 mode select
+		*/
+		mode-sel-gpio = <&gpio0 26 GPIO_ACTIVE_HIGH>; /* U11 */
+		status = "okay"; 
+	};
+
+	exar_uart2: exar_uart2@a000000 {
+		device_type = "serial";	
+		compatible = "exar,16m890";
+		/*
+		 * use GPMC cs2 base memory(0xa000000)
+		 * size 0x07 (only 3 bit)
+		*/
+		reg = <0x0a000000 0x07>;
+		clock-frequency = <29491200>;
+		fifo-size = <128>;
+		/*
+		 * Pin V14 cannot be a external interrupt,
+		 * so use GPIO mode as interrupt
+		 * reference by TRM 25.3.3
+		*/
+		interrupt-parent = <&gpio1>;
+		interrupts = <17 GPIO_ACTIVE_LOW>; /* V14 */
+		/* 
+		 * self implement:
+		 * 232/422/485 mode select
+		*/
+		mode-sel-gpio = <&gpio0 23 GPIO_ACTIVE_HIGH>; /* T10 */
+		status = "okay"; 
+	};
+
+	exar_uart3: exar_uart3@a000008 {
+		device_type = "serial";	
+		compatible = "exar,16m890";
+		/*
+		 * use GPMC cs2 base memory(0xa000008)
+		 * size 0x07 (only 3 bit)
+		*/
+		reg = <0x0a000008 0x07>;
+		clock-frequency = <29491200>;
+		fifo-size = <128>;
+		/*
+		 * Pin U14 cannot be a external interrupt,
+		 * so use GPIO mode as interrupt
+		 * reference by TRM 25.3.3
+		*/
+		interrupt-parent = <&gpio1>;
+		interrupts = <18 GPIO_ACTIVE_LOW>; /* U14 */
+		/* 
+		 * self implement:
+		 * 232/422/485 mode select
+		*/
+		mode-sel-gpio = <&gpio0 22 GPIO_ACTIVE_HIGH>; /* U10 */
+		status = "okay"; 
+	};
 };
 
 &am33xx_pinmux {
@@ -45,14 +147,7 @@
 			0x164 (PIN_OUTPUT | MUX_MODE7)	/* ecap0_in_pwm0_out.gpio0_7 */
 		>;
 	};
-/*
-	i2c0_pins: pinmux_i2c0_pins {
-		pinctrl-single,pins = <
-			0x188 (PIN_INPUT_PULLUP | MUX_MODE0)	// i2c0_sda.i2c0_sda
-			0x18c (PIN_INPUT_PULLUP | MUX_MODE0)	// i2c0_scl.i2c0_scl
-		>;
-	};
-*/	
+	
 	clkout2_pin: pinmux_clkout2_pin {
 		pinctrl-single,pins = <
 			0x1b4 (PIN_OUTPUT_PULLDOWN | MUX_MODE3)	/* xdma_event_intr1.clkout2 */
@@ -76,7 +171,6 @@
 			0x13c ( PIN_INPUT_PULLUP | MUX_MODE1 )		/* (L15) gmii1_rxd1.rmii1_rxd1 */
 			0x140 ( PIN_INPUT_PULLUP | MUX_MODE1 ) 		/* (M16) gmii1_rxd0.rmii1_rxd0 */
 			0x144 ( PIN_INPUT_PULLDOWN | MUX_MODE0 ) 	/* (H18) rmii1_refclk.rmii1_refclk */
-	
 			/* Slave 2 */
 			0x40 ( PIN_OUTPUT_PULLDOWN | MUX_MODE3 ) 	/* (R13) gpmc_a0.rmii2_txen */
 			0x50 ( PIN_OUTPUT_PULLDOWN | MUX_MODE3 ) 	/* (R14) gpmc_a4.rmii2_txd1 */
@@ -144,8 +238,8 @@
 			0xa4 (PIN_OUTPUT | MUX_MODE1)		/* (R2) gpmca1, SMI_Addr1 */
 			/* The exar uart2 & uart3 pins */
 			0x84 (PIN_OUTPUT | MUX_MODE0)		/* (V9) gpmc_csn2.gpmc_csn2 */
-			0x44 (PIN_INPUT | MUX_MODE6)		/* (U14) epwm0int, INT2 */
-			0x48 (PIN_INPUT | MUX_MODE6)		/* (V14) epwm1int, INT3 */
+			0x44 (PIN_INPUT | MUX_MODE7)		/* (V14) gpio1[17], INT2 */
+			0x48 (PIN_INPUT | MUX_MODE7)		/* (U14) gpio1[18], INT3 */
 			0x24 (PIN_OUTPUT | MUX_MODE7)		/* (T10) gpio0[23], LD_SEL2 */
 			0x20 (PIN_OUTPUT | MUX_MODE7)		/* (U10) gpio0[22], LD_SEL3 */
 			0xa8 (PIN_OUTPUT | MUX_MODE1)		/* (R3) gpmca2, SMI_Addr2 */
@@ -155,19 +249,6 @@
 
 };
 
-/*
-&i2c0 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&i2c0_pins>;
-
-	status = "okay";
-	clock-frequency = <400000>;
-
-	tps: tps@2d {
-		reg = <0x2d>;
-	};
-};
-*/
 &elm{
 	status = "okay";
 };
@@ -176,9 +257,9 @@
 	status = "okay";
 	pinctrl-names = "default";
 	pinctrl-0 = <&gpmc_pins>;
-	ranges = <0 0 0x08000000 0x01000000>,	/* CS0: 16MB for NAND */
-			<1 0 0x09000000 0x01000000>,	/* CS1: 16MB for exar uart controller 1 */
-			<2 0 0x0a000000 0x01000000>;	/* CS2: 16MB for exar uart controller 2 */
+	ranges = <0 0 0x08000000 0x01000000>,/* CS0: 16MB for NAND */
+			<1 0 0x09000000 0x01000000>, /* CS1: 16MB for exar uart controller 1 */
+			<2 0 0x0a000000 0x01000000>; /* CS2: 16MB for exar uart controller 2 */
 	nand@0,0 {
 		compatible = "ti,omap2-nand";
 		reg = <0 0 4>; /* CS0, offset 0, IO size 4 */
@@ -261,21 +342,11 @@
 		};
 	};
 	
-	exar_controller_0@1,0 {
+	exar_controller0@1,0 {
 		reg = <1 0 0x01000000>;
-/*
-		device_type = "serial";
-		compatible = "exar,16m890";
-		fifo-size = <128>;
-		interrupt-parent = <&intc>;
-		interrupts = <123>;
-		clock-frequency = <29491200>;
-		mode-sel-gpio = <&gpio0 27 GPIO_ACTIVE_HIGH>; 
-*/
-		/* 232/422/485 mode sel */
 		#address-cells = <1>;
-		#size-cells = <1>;	/* allow CS address passing */
-		gpmc,device-width = <1>;	/* 8-bit data width */
+		#size-cells = <1>;		/* allow CS address passing */
+		gpmc,device-width = <1>;/* 8-bit data width */
 		bank-width = <1>;
 
 		gpmc,mux-add-data;		
@@ -298,17 +369,9 @@
 		gpmc,oe-off-ns = <140>;
 		gpmc,oe-on-ns = <20>;
     };
-/*	
-	exar_controller_1@2,0 {
-		device_type = "serial";
-		compatible = "exar,16m890";
+	
+	exar_controller1@2,0 {
 		reg = <2 0 0x01000000>;
-		fifo-size = <128>;
-		interrupt-parent = <&intc>;
-		interrupts = <124>;
-		mode-sel-gpio = <&gpio0 26 GPIO_ACTIVE_HIGH>;
-		clock-frequency = <29491200>;
-		
 		#address-cells = <1>;
 		#size-cells = <1>;
 		gpmc,device-width = <1>;
@@ -334,7 +397,6 @@
 		gpmc,oe-off-ns = <140>;
 		gpmc,oe-on-ns = <20>;
     };
-*/
 };
 
 /* PWM controller, remove it? */
@@ -410,12 +472,3 @@
 	pinctrl-0 = <&uart0_pins>;
 	status = "okay";
 };
-
-&exar_uart0 {
-	status = "okay";
-};
-
-&exar_uart1 {
-	status = "okay";
-};
-

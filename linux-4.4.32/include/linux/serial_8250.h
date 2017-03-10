@@ -101,8 +101,8 @@ struct uart_8250_port {
 	unsigned char		cur_iotype;	/* Running I/O type */
 	unsigned int		rpm_tx_active;
 	unsigned char		canary;		/* non-zero during system sleep
-						 *   if no_console_suspend
-						 */
+									 *   if no_console_suspend
+									 */
 	unsigned char		probe;
 #define UART_PROBE_RSA	(1 << 0)
 
