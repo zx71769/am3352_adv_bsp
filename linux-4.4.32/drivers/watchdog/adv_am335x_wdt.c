@@ -19,6 +19,7 @@
 #define AM335X_CM_PER_GPIO1_CLKCTRL (0x44E00000+0xAC)
 #define AM335X_CM_PER_GPIO2_CLKCTRL (0x44E00000+0xB0)
 #define AM335X_CM_PER_GPIO3_CLKCTRL (0x44E00000+0xB4)
+#define AM335X_PRCM_MEM_SIZE	0x04
 
 #define ADV_GPIO_OE				0x134	/* Output/Input enable */
 #define ADV_GPIO_DATAIN			0x138	/* the data of input pin */
@@ -30,6 +31,7 @@
 #define ADV_GPIO1_BASE 0x4804C000
 #define ADV_GPIO2_BASE 0x481AC000
 #define ADV_GPIO3_BASE 0x481AE000
+#define ADV_GPIOPAD_MEM_SIZE 0x2000
 
 #define ADV_WDT_OFFSET  0x00400000  /* GPIO2_22 */
 
@@ -39,33 +41,10 @@ struct timer_list adv_timer;
 static void __iomem *gpio_base; 
 static void __iomem *prcm_base; 
 
-
-static void _delay(void)
+static inline void _delay(void)
 {
 	int i = 1000;
 	do{}while(i--);
-}
-
-static int init_gpio(void)
-{
-	gpio_base = ioremap(ADV_GPIO2_BASE, 0x2000);
-	if(gpio_base == NULL){
-		pr_err("gpio_base memory mapping failed!\n");
-		//goto unremap
-		return -1;
-	}
-	
-	prcm_base = ioremap(AM335X_CM_PER_GPIO2_CLKCTRL, 0x04);
-	if(prcm_base == NULL){
-		pr_err("prmc_base memory mapping failed!\n");
-		//goto unremap
-		return -1;
-	}
-	
-	writel(0x02, prcm_base);
-	writel(0xFFFFFFFF&~(ADV_WDT_OFFSET), gpio_base+ADV_GPIO_OE);
-	
-	return 0;
 }
 
 static void adv_wdt_do_reset(void)
@@ -73,7 +52,7 @@ static void adv_wdt_do_reset(void)
 	u32 tmp;
 	
 	tmp = (readl(gpio_base+ADV_GPIO_DATAOUT));
-	pr_info("before set: %ld\n", tmp);
+	pr_info("before set: %d\n", (unsigned int)tmp);
 
 /*
 	iowrite32be(ADV_WDT_OFFSET, (__volatile__ void *)(ADV_GPIO2_BASE+ADV_GPIO_CLEARDATAOUT)); //set 0
@@ -153,6 +132,54 @@ static struct miscdevice adv_am335x_wdt_miscdev = {
 	.fops	= &adv_am335x_wdt_ops,
 }; 
 
+static int wdt_gpio_init(void)
+{
+	if(request_mem_region(ADV_GPIO2_BASE, 
+						ADV_GPIOPAD_MEM_SIZE,
+						"GPIO2_PAD") == NULL)
+	{
+		pr_err("adv watchdog gpio mem request failed!");
+		goto gpio_req_mem_err;
+	}
+	gpio_base = ioremap_nocache(ADV_GPIO2_BASE, ADV_GPIOPAD_MEM_SIZE);
+	if(gpio_base == NULL){
+		pr_err("adv watchdog gpio memory mapping failed!\n");
+		goto gpio_map_err;
+	}
+
+	if(request_mem_region(AM335X_CM_PER_GPIO2_CLKCTRL, 
+								AM335X_PRCM_MEM_SIZE, 
+								"GPIO2_PRCM") == NULL)
+	{
+		pr_err("adv watchdog prcm mem request failed!");
+		goto prcm_req_mem_err;
+	}
+	prcm_base = ioremap_nocache(AM335X_CM_PER_GPIO2_CLKCTRL, 
+										AM335X_PRCM_MEM_SIZE);
+	if(prcm_base == NULL){
+		pr_err("adv watchdog gpio prcm memory mapping failed!\n");
+		goto prcm_map_err;
+	}
+	
+	writel(0x02, prcm_base);
+	writel(0xFFFFFFFF&~(ADV_WDT_OFFSET), gpio_base+ADV_GPIO_OE);
+	pr_info("adv watchdog %s success !\n", __func__);
+	
+	return 0;
+
+prcm_map_err:
+	iounmap(prcm_base);
+prcm_req_mem_err:
+	release_mem_region(AM335X_CM_PER_GPIO2_CLKCTRL, AM335X_PRCM_MEM_SIZE);
+gpio_map_err:
+	iounmap(gpio_base);
+gpio_req_mem_err:
+	release_mem_region(ADV_GPIO2_BASE, ADV_GPIOPAD_MEM_SIZE);
+	
+	return -1;
+}
+
+
 static int __init adv_am335x_wdt_init(void)
 {
 	int ret;
@@ -167,10 +194,9 @@ static int __init adv_am335x_wdt_init(void)
 	}
 	pr_info("register miscdev success!\n");
 
-	if(init_gpio() == -1){
-		pr_err("%s: ioremap failed!\n", __func__);
+	if(wdt_gpio_init() == -1)
 		return -EIO;
-	}
+
 	pr_info("%s: ioremap success!\n", __func__);
 
 	init_timer(&adv_timer);
@@ -183,6 +209,10 @@ static int __init adv_am335x_wdt_init(void)
 static void __exit adv_am335x_wdt_exit(void)
 {
 	pr_info("%s\n", __func__);
+	iounmap(prcm_base);
+	release_mem_region(AM335X_CM_PER_GPIO2_CLKCTRL, AM335X_PRCM_MEM_SIZE);
+	iounmap(gpio_base);
+	release_mem_region(ADV_GPIO2_BASE, ADV_GPIOPAD_MEM_SIZE);
 	misc_deregister(&adv_am335x_wdt_miscdev);
 }
 
