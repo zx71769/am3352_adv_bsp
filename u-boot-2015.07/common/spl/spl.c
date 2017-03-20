@@ -153,6 +153,8 @@ void board_init_r(gd_t *dummy1, ulong dummy2)
 	u32 boot_device;
 	int ret;
 
+	ADV_WDT_CLEANUP();
+
 #if defined(CONFIG_SYS_SPL_MALLOC_START)
 	mem_malloc_init(CONFIG_SYS_SPL_MALLOC_START,
 					CONFIG_SYS_SPL_MALLOC_SIZE);
@@ -191,6 +193,8 @@ void board_init_r(gd_t *dummy1, ulong dummy2)
 #ifdef CONFIG_SPL_BOARD_INIT
 	spl_board_init();
 #endif
+
+	ADV_WDT_CLEANUP();
 
 	boot_device = spl_boot_device();
 	switch (boot_device) {
@@ -278,6 +282,8 @@ void board_init_r(gd_t *dummy1, ulong dummy2)
 #endif
 		hang();
 	}
+
+	ADV_WDT_CLEANUP();
 
 	switch (spl_image.os) {
 	case IH_OS_U_BOOT:

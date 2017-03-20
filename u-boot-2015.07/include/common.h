@@ -1019,4 +1019,14 @@ int cpu_release(int nr, int argc, char * const argv[]);
 
 int play_games(void);
 
+#ifdef CONFIG_ADV_HW_WATCHDOG
+void adv_wdi_clear(void);
+void adv_wdi_gpio_init(void);
+#define ADV_WDT_CLEANUP()	adv_wdi_clear()
+#define ADV_WDT_INIT()		adv_wdi_gpio_init()
+#else
+#define ADV_WDT_CLEANUP()	do{}while(0)
+#define ADV_WDT_INIT()		do{}while(0)
+#endif
+
 #endif	/* __COMMON_H_ */

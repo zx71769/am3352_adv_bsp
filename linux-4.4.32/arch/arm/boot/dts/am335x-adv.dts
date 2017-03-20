@@ -140,7 +140,7 @@
 
 &am33xx_pinmux {
 	pinctrl-names = "default";
-	pinctrl-0 = <&ddr3_vtt_toggle &gpmc_pins>;
+	pinctrl-0 = <&ddr3_vtt_toggle &gpmc_pins &wdt_pins>;
 	
 	ddr3_vtt_toggle: ddr3_vtt_toggle {
 		pinctrl-single,pins = <
@@ -197,7 +197,13 @@
 			0x174 (PIN_OUTPUT_PULLDOWN | MUX_MODE0)	/* (E16) uart0_txd0 */ 
 		>;
 	};
-
+	
+	wdt_pins: pinmux_wdt_pins {
+		pinctrl-single,pins = <
+			0xe0 (PIN_INPUT_PULLUP | MUX_MODE7)	/* (U5) watchdog gpio2[22] */
+		>;
+	};
+	
 	gpmc_pins: pinmux_gpmc_pins {
 		pinctrl-single,pins = <
 			/* The nand flash pins */
@@ -434,6 +440,17 @@
 
 &gpio0 {
 	ti,no-reset-on-init;
+	ti,no-idle;
+};
+
+&gpio1 {
+	ti,no-reset-on-init;
+	ti,no-idle;
+};
+
+&gpio2 {
+	ti,no-reset-on-init;
+	ti,no-idle;
 };
 
 &rtc {

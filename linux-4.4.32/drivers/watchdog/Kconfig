@@ -173,6 +173,12 @@ config ARM_SP805_WATCHDOG
 	  ARM Primecell SP805 Watchdog timer. This will reboot your system when
 	  the timeout is reached.
 
+config ADVANTECH_AM335x_WDT
+	tristate "Advantech ICG device server am335x series Watchdog Timer"
+	depends on ARM
+	help
+		Watchdog timer embedded for Advantech ICG device server am335x series.
+
 config AT91RM9200_WATCHDOG
 	tristate "AT91RM9200 watchdog"
 	depends on SOC_AT91RM9200 && MFD_SYSCON

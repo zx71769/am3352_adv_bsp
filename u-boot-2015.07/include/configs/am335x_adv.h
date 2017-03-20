@@ -351,4 +351,6 @@
 #define CLK_SYNTHESIZER_I2C_ADDR 0x65
 #endif
 
+#define CONFIG_ADV_HW_WATCHDOG
+
 #endif	/* ! __CONFIG_AM335X_EVM_H */

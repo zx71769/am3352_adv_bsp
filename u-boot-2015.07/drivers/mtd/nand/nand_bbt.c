@@ -519,6 +519,9 @@ static int create_bbt(struct mtd_info *mtd, uint8_t *buf,
 
 		from += (1 << this->bbt_erase_shift);
 	}
+
+//	ADV_WDT_CLEANUP();
+
 	return 0;
 }
 

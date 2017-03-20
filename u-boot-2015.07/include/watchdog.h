@@ -21,14 +21,20 @@
 int init_func_watchdog_reset(void);
 #endif
 
-#if defined(CONFIG_SYS_GENERIC_BOARD) && \
+#ifdef CONFIG_ADV_HW_WATCHDOG
+	extern int init_func_adv_watchdog_reset(void);
+	#define INIT_FUNC_WATCHDOG_INIT
+	#define INIT_FUNC_WATCHDOG_RESET init_func_adv_watchdog_reset,
+#else 
+	#if defined(CONFIG_SYS_GENERIC_BOARD) && \
 	(defined(CONFIG_WATCHDOG) || defined(CONFIG_HW_WATCHDOG))
-#define INIT_FUNC_WATCHDOG_INIT	init_func_watchdog_init,
-#define INIT_FUNC_WATCHDOG_RESET	init_func_watchdog_reset,
-#else
-#define INIT_FUNC_WATCHDOG_INIT
-#define INIT_FUNC_WATCHDOG_RESET
-#endif
+		#define INIT_FUNC_WATCHDOG_INIT	init_func_watchdog_init,
+		#define INIT_FUNC_WATCHDOG_RESET	init_func_watchdog_reset,
+	#else
+		#define INIT_FUNC_WATCHDOG_INIT
+		#define INIT_FUNC_WATCHDOG_RESET
+	#endif
+#endif /* CONFIG_ADV_HW_WATCHDOG */
 
 #if defined(CONFIG_HW_WATCHDOG) && defined(CONFIG_WATCHDOG)
 #  error "Configuration error: CONFIG_HW_WATCHDOG and CONFIG_WATCHDOG can't be used together."
@@ -37,38 +43,45 @@ int init_func_watchdog_reset(void);
 /*
  * Hardware watchdog
  */
-#ifdef CONFIG_HW_WATCHDOG
+#ifdef CONFIG_ADV_HW_WATCHDOG
 	#if defined(__ASSEMBLY__)
-		#define WATCHDOG_RESET bl hw_watchdog_reset
+		#define WATCHDOG_RESET bl adv_wdi_clear 
 	#else
-		extern void hw_watchdog_reset(void);
-
-		#define WATCHDOG_RESET hw_watchdog_reset
-	#endif /* __ASSEMBLY__ */
-#else
-	/*
-	 * Maybe a software watchdog?
-	 */
-	#if defined(CONFIG_WATCHDOG)
+		extern void adv_wdi_clear(void);
+		#define WATCHDOG_RESET adv_wdi_clear
+	#endif
+#else 
+	#ifdef CONFIG_HW_WATCHDOG
 		#if defined(__ASSEMBLY__)
-			#define WATCHDOG_RESET bl watchdog_reset
+			#define WATCHDOG_RESET bl hw_watchdog_reset
 		#else
-			extern void watchdog_reset(void);
-
-			#define WATCHDOG_RESET watchdog_reset
-		#endif
+			extern void hw_watchdog_reset(void);
+			#define WATCHDOG_RESET hw_watchdog_reset
+		#endif /* __ASSEMBLY__ */
 	#else
+		/*
+		 * Maybe a software watchdog?
+		 */
+		#if defined(CONFIG_WATCHDOG)
+			#if defined(__ASSEMBLY__)
+				#define WATCHDOG_RESET bl watchdog_reset
+			#else
+				extern void watchdog_reset(void);
+				#define WATCHDOG_RESET watchdog_reset
+			#endif
+		#else
 		/*
 		 * No hardware or software watchdog.
 		 */
-		#if defined(__ASSEMBLY__)
-			#define WATCHDOG_RESET /*XXX DO_NOT_DEL_THIS_COMMENT*/
-		#else
-			#define WATCHDOG_RESET() {}
-		#endif /* __ASSEMBLY__ */
+			#if defined(__ASSEMBLY__)
+				#define WATCHDOG_RESET /*XXX DO_NOT_DEL_THIS_COMMENT*/
+			#else
+				#define WATCHDOG_RESET() {}
+			#endif /* __ASSEMBLY__ */
 	#endif /* CONFIG_WATCHDOG && !__ASSEMBLY__ */
 #endif /* CONFIG_HW_WATCHDOG */
 
+#endif /* CONFIG_ADV_HW_WATCHDOG */
 /*
  * Prototypes from $(CPU)/cpu.c.
  */

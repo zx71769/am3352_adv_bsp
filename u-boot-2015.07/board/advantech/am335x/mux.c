@@ -21,45 +21,43 @@
 #include <i2c.h>
 #include "board.h"
 
-#define __MU __maybe_unused
-
-static struct module_pin_mux __MU uart0_pin_mux[] = {
+static struct module_pin_mux __maybe_unused uart0_pin_mux[] = {
 	{OFFSET(uart0_rxd), (MODE(0) | PULLUP_EN | RXACTIVE)},	/* UART0_RXD */
 	{OFFSET(uart0_txd), (MODE(0) | PULLUDEN)},		/* UART0_TXD */
 	{-1},
 };
 
-static struct module_pin_mux __MU uart1_pin_mux[] = {
+static struct module_pin_mux __maybe_unused uart1_pin_mux[] = {
 	{OFFSET(uart1_rxd), (MODE(0) | PULLUP_EN | RXACTIVE)},	/* UART1_RXD */
 	{OFFSET(uart1_txd), (MODE(0) | PULLUDEN)},		/* UART1_TXD */
 	{-1},
 };
 
-static struct module_pin_mux __MU uart2_pin_mux[] = {
+static struct module_pin_mux __maybe_unused uart2_pin_mux[] = {
 	{OFFSET(spi0_sclk), (MODE(1) | PULLUP_EN | RXACTIVE)},	/* UART2_RXD */
 	{OFFSET(spi0_d0), (MODE(1) | PULLUDEN)},		/* UART2_TXD */
 	{-1},
 };
 
-static struct module_pin_mux __MU uart3_pin_mux[] = {
+static struct module_pin_mux __maybe_unused uart3_pin_mux[] = {
 	{OFFSET(spi0_cs1), (MODE(1) | PULLUP_EN | RXACTIVE)},	/* UART3_RXD */
 	{OFFSET(ecap0_in_pwm0_out), (MODE(1) | PULLUDEN)},	/* UART3_TXD */
 	{-1},
 };
 
-static struct module_pin_mux __MU uart4_pin_mux[] = {
+static struct module_pin_mux __maybe_unused uart4_pin_mux[] = {
 	{OFFSET(gpmc_wait0), (MODE(6) | PULLUP_EN | RXACTIVE)},	/* UART4_RXD */
 	{OFFSET(gpmc_wpn), (MODE(6) | PULLUDEN)},		/* UART4_TXD */
 	{-1},
 };
 
-static struct module_pin_mux __MU uart5_pin_mux[] = {
+static struct module_pin_mux __maybe_unused uart5_pin_mux[] = {
 	{OFFSET(lcd_data9), (MODE(4) | PULLUP_EN | RXACTIVE)},	/* UART5_RXD */
 	{OFFSET(lcd_data8), (MODE(4) | PULLUDEN)},		/* UART5_TXD */
 	{-1},
 };
 
-static struct module_pin_mux __MU mmc0_pin_mux[] = {
+static struct module_pin_mux __maybe_unused mmc0_pin_mux[] = {
 	{OFFSET(mmc0_dat3), (MODE(0) | RXACTIVE | PULLUP_EN)},	/* MMC0_DAT3 */
 	{OFFSET(mmc0_dat2), (MODE(0) | RXACTIVE | PULLUP_EN)},	/* MMC0_DAT2 */
 	{OFFSET(mmc0_dat1), (MODE(0) | RXACTIVE | PULLUP_EN)},	/* MMC0_DAT1 */
@@ -71,7 +69,7 @@ static struct module_pin_mux __MU mmc0_pin_mux[] = {
 	{-1},
 };
 
-static struct module_pin_mux __MU mmc0_no_cd_pin_mux[] = {
+static struct module_pin_mux __maybe_unused mmc0_no_cd_pin_mux[] = {
 	{OFFSET(mmc0_dat3), (MODE(0) | RXACTIVE | PULLUP_EN)},	/* MMC0_DAT3 */
 	{OFFSET(mmc0_dat2), (MODE(0) | RXACTIVE | PULLUP_EN)},	/* MMC0_DAT2 */
 	{OFFSET(mmc0_dat1), (MODE(0) | RXACTIVE | PULLUP_EN)},	/* MMC0_DAT1 */
@@ -82,7 +80,7 @@ static struct module_pin_mux __MU mmc0_no_cd_pin_mux[] = {
 	{-1},
 };
 
-static struct module_pin_mux __MU mmc0_pin_mux_sk_evm[] = {
+static struct module_pin_mux __maybe_unused mmc0_pin_mux_sk_evm[] = {
 	{OFFSET(mmc0_dat3), (MODE(0) | RXACTIVE | PULLUP_EN)},	/* MMC0_DAT3 */
 	{OFFSET(mmc0_dat2), (MODE(0) | RXACTIVE | PULLUP_EN)},	/* MMC0_DAT2 */
 	{OFFSET(mmc0_dat1), (MODE(0) | RXACTIVE | PULLUP_EN)},	/* MMC0_DAT1 */
@@ -93,7 +91,7 @@ static struct module_pin_mux __MU mmc0_pin_mux_sk_evm[] = {
 	{-1},
 };
 
-static struct module_pin_mux __MU mmc1_pin_mux[] = {
+static struct module_pin_mux __maybe_unused mmc1_pin_mux[] = {
 	{OFFSET(gpmc_ad3), (MODE(1) | RXACTIVE | PULLUP_EN)},	/* MMC1_DAT3 */
 	{OFFSET(gpmc_ad2), (MODE(1) | RXACTIVE | PULLUP_EN)},	/* MMC1_DAT2 */
 	{OFFSET(gpmc_ad1), (MODE(1) | RXACTIVE | PULLUP_EN)},	/* MMC1_DAT1 */
@@ -105,7 +103,7 @@ static struct module_pin_mux __MU mmc1_pin_mux[] = {
 	{-1},
 };
 
-static struct module_pin_mux __MU i2c0_pin_mux[] = {
+static struct module_pin_mux __maybe_unused i2c0_pin_mux[] = {
 	{OFFSET(i2c0_sda), (MODE(0) | RXACTIVE |
 			PULLUDEN | SLEWCTRL)}, /* I2C_DATA */
 	{OFFSET(i2c0_scl), (MODE(0) | RXACTIVE |
@@ -113,7 +111,7 @@ static struct module_pin_mux __MU i2c0_pin_mux[] = {
 	{-1},
 };
 
-static struct module_pin_mux __MU i2c1_pin_mux[] = {
+static struct module_pin_mux __maybe_unused i2c1_pin_mux[] = {
 	{OFFSET(spi0_d1), (MODE(2) | RXACTIVE |
 			PULLUDEN | SLEWCTRL)},	/* I2C_DATA */
 	{OFFSET(spi0_cs0), (MODE(2) | RXACTIVE |
@@ -121,7 +119,7 @@ static struct module_pin_mux __MU i2c1_pin_mux[] = {
 	{-1},
 };
 
-static struct module_pin_mux __MU spi0_pin_mux[] = {
+static struct module_pin_mux __maybe_unused spi0_pin_mux[] = {
 	{OFFSET(spi0_sclk), (MODE(0) | RXACTIVE | PULLUDEN)},	/* SPI0_SCLK */
 	{OFFSET(spi0_d0), (MODE(0) | RXACTIVE |
 			PULLUDEN | PULLUP_EN)},			/* SPI0_D0 */
@@ -131,17 +129,22 @@ static struct module_pin_mux __MU spi0_pin_mux[] = {
 	{-1},
 };
 
-static struct module_pin_mux __MU gpio0_7_pin_mux[] = {
+static struct module_pin_mux __maybe_unused gpio0_7_pin_mux[] = {
 	{OFFSET(ecap0_in_pwm0_out), (MODE(7) | PULLUDEN)},	/* GPIO0_7 */
 	{-1},
 };
 
-static struct module_pin_mux __MU gpio0_18_pin_mux[] = {
+static struct module_pin_mux __maybe_unused gpio0_18_pin_mux[] = {
 	{OFFSET(usb0_drvvbus), (MODE(7) | PULLUDEN)},	/* GPIO0_18 */
 	{-1},
 };
 
-static struct module_pin_mux __MU rgmii1_pin_mux[] = {
+static struct module_pin_mux __maybe_unused gpio2_22_pin_mux[] = {
+	{OFFSET(lcd_vsync), (MODE(7) | PULLUDEN)},	/* adv watchdog timer */
+	{-1},
+};
+
+static struct module_pin_mux __maybe_unused rgmii1_pin_mux[] = {
 	{OFFSET(mii1_txen), MODE(2)},			/* RGMII1_TCTL */
 	{OFFSET(mii1_rxdv), MODE(2) | RXACTIVE},	/* RGMII1_RCTL */
 	{OFFSET(mii1_txd3), MODE(2)},			/* RGMII1_TD3 */
@@ -159,7 +162,7 @@ static struct module_pin_mux __MU rgmii1_pin_mux[] = {
 	{-1},
 };
 
-static struct module_pin_mux __MU mii1_pin_mux[] = {
+static struct module_pin_mux __maybe_unused mii1_pin_mux[] = {
 	{OFFSET(mii1_rxerr), MODE(0) | RXACTIVE},	/* MII1_RXERR */
 	{OFFSET(mii1_txen), MODE(0)},			/* MII1_TXEN */
 	{OFFSET(mii1_rxdv), MODE(0) | RXACTIVE},	/* MII1_RXDV */
@@ -178,7 +181,7 @@ static struct module_pin_mux __MU mii1_pin_mux[] = {
 	{-1},
 };
 
-static struct module_pin_mux __MU rmii1_pin_mux[] = {
+static struct module_pin_mux __maybe_unused rmii1_pin_mux[] = {
 	{OFFSET(mdio_clk), MODE(0) | PULLUP_EN},	// MDIO_CLK
 	{OFFSET(mdio_data), MODE(0) | RXACTIVE | PULLUP_EN}, // MDIO_DATA
 	{OFFSET(mii1_crs), MODE(1) | RXACTIVE},		// MII1_CRS
@@ -192,10 +195,9 @@ static struct module_pin_mux __MU rmii1_pin_mux[] = {
 	{-1},
 };
 
-static struct module_pin_mux __MU rmii2_pin_mux[] = {
+static struct module_pin_mux __maybe_unused rmii2_pin_mux[] = {
 	{OFFSET(gpmc_wpn), MODE(3) | RXACTIVE},         /* RMII2_RXERR */
 	{OFFSET(gpmc_a0), MODE(3)},             		/* RMII2_TXEN */
-//	{OFFSET(gpmc_wait0), MODE(3) | RXACTIVE},       /* RMII2_CRS_DV */
 	{OFFSET(gpmc_csn3), MODE(3) | RXACTIVE},		/* RMII2_CRS_DV */
 	{OFFSET(gpmc_a4), MODE(3)},             		/* RMII2_TXD1 */
 	{OFFSET(gpmc_a5), MODE(3)},             		/* RMII2_TXD0 */
@@ -206,7 +208,7 @@ static struct module_pin_mux __MU rmii2_pin_mux[] = {
 };
 
 #ifdef CONFIG_NAND
-static struct module_pin_mux __MU nand_pin_mux[] = {
+static struct module_pin_mux __maybe_unused nand_pin_mux[] = {
 	{OFFSET(gpmc_ad0),	(MODE(0) | PULLUDDIS | RXACTIVE)}, /* AD0  */
 	{OFFSET(gpmc_ad1),	(MODE(0) | PULLUDDIS | RXACTIVE)}, /* AD1  */
 	{OFFSET(gpmc_ad2),	(MODE(0) | PULLUDDIS | RXACTIVE)}, /* AD2  */
@@ -237,43 +239,43 @@ static struct module_pin_mux __MU nand_pin_mux[] = {
 };
 #endif
 
-static struct module_pin_mux __MU uart3_icev2_pin_mux[] = {
+static struct module_pin_mux __maybe_unused uart3_icev2_pin_mux[] = {
 	{OFFSET(mii1_rxd3), (MODE(1) | PULLUP_EN | RXACTIVE)},	/* UART3_RXD */
 	{OFFSET(mii1_rxd2), MODE(1) | PULLUDEN},		/* UART3_TXD */
 	{-1},
 };
 
-void __MU enable_uart0_pin_mux(void)
+void __maybe_unused enable_uart0_pin_mux(void)
 {
 	configure_module_pin_mux(uart0_pin_mux);
 }
 
-void __MU enable_uart1_pin_mux(void)
+void __maybe_unused enable_uart1_pin_mux(void)
 {
 	configure_module_pin_mux(uart1_pin_mux);
 }
 
-void __MU enable_uart2_pin_mux(void)
+void __maybe_unused enable_uart2_pin_mux(void)
 {
 	configure_module_pin_mux(uart2_pin_mux);
 }
 
-void __MU enable_uart3_pin_mux(void)
+void __maybe_unused enable_uart3_pin_mux(void)
 {
 	configure_module_pin_mux(uart3_pin_mux);
 }
 
-void __MU enable_uart4_pin_mux(void)
+void __maybe_unused enable_uart4_pin_mux(void)
 {
 	configure_module_pin_mux(uart4_pin_mux);
 }
 
-void __MU enable_uart5_pin_mux(void)
+void __maybe_unused enable_uart5_pin_mux(void)
 {
 	configure_module_pin_mux(uart5_pin_mux);
 }
 
-void __MU enable_i2c0_pin_mux(void)
+void __maybe_unused enable_i2c0_pin_mux(void)
 {
 	configure_module_pin_mux(i2c0_pin_mux);
 }
@@ -299,7 +301,7 @@ void __MU enable_i2c0_pin_mux(void)
 #define I2C_CPLD_ADDR	0x35
 #define CFG_REG		0x10
 
-static unsigned short __MU detect_daughter_board_profile(void)
+static unsigned short __maybe_unused detect_daughter_board_profile(void)
 {
 	unsigned short val;
 
@@ -315,6 +317,7 @@ static unsigned short __MU detect_daughter_board_profile(void)
 void enable_board_pin_mux(void)
 {
 	/* Advantech crop. custom board */
+	configure_module_pin_mux(gpio2_22_pin_mux);
 #ifdef CONFIG_NAND
 	configure_module_pin_mux(nand_pin_mux);
 #endif

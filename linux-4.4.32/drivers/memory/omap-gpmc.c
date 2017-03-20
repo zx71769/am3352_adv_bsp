@@ -1982,9 +1982,6 @@ static int gpmc_probe_generic_child(struct platform_device *pdev,
 	gpmc_cs_set_name(cs, child->name);
 	gpmc_read_settings_dt(child, &gpmc_s);
 	gpmc_read_timings_dt(child, &gpmc_t);
-
-	pr_info("GPMC [%s]chip-select %d request success!\n", child->name, cs);
-
 	/*
 	 * For some GPMC devices we still need to rely on the bootloader
 	 * timings because the devices can be connected via FPGA.
@@ -2095,6 +2092,8 @@ static int gpmc_probe_generic_child(struct platform_device *pdev,
 
 	/* Enable CS region */
 	gpmc_cs_enable_mem(cs);
+	pr_info("GPMC [%s]chip-select %d enable success!", 
+										child->name, cs);
 
 no_timings:
 

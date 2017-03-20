@@ -263,6 +263,8 @@ int board_early_init_f(void)
 	debug("Board_early_init\n");
 	prcm_init();
 	set_mux_conf_regs();
+	ADV_WDT_INIT();
+	ADV_WDT_CLEANUP();
 #if defined(CONFIG_SPL_BUILD) && defined(CONFIG_SPL_RTC_ONLY_SUPPORT)
 	update_rtc_magic();
 #endif

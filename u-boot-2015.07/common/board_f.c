@@ -109,7 +109,7 @@ __weak void blue_led_off(void) {}
  */
 
 #if defined(CONFIG_WATCHDOG) || defined(CONFIG_HW_WATCHDOG)
-static int init_func_watchdog_init(void)
+static int __maybe_unused init_func_watchdog_init(void)
 {
 # if defined(CONFIG_HW_WATCHDOG) && (defined(CONFIG_BLACKFIN) || \
 	defined(CONFIG_M68K) || defined(CONFIG_MICROBLAZE) || \
@@ -862,7 +862,6 @@ static init_fnc_t init_sequence_f[] = {
 	testdram,
 #endif /* CONFIG_SYS_DRAM_TEST */
 	INIT_FUNC_WATCHDOG_RESET
-
 #ifdef CONFIG_POST
 	init_post,
 #endif

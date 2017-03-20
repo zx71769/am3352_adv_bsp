@@ -1343,6 +1343,8 @@ int find_dev_and_part(const char *id, struct mtd_device **dev,
 
 	debug("--- find_dev_and_part ---\nid = %s\n", id);
 
+//	ADV_WDT_CLEANUP();
+
 	list_for_each(dentry, &devices) {
 		*part_num = 0;
 		*dev = list_entry(dentry, struct mtd_device, link);
@@ -1531,6 +1533,8 @@ static int parse_mtdparts(const char *const mtdparts)
 
 	debug("\n---parse_mtdparts---\nmtdparts = %s\n\n", p);
 
+//	ADV_WDT_CLEANUP();
+
 	/* delete all devices and partitions */
 	if (mtd_devices_init() != 0) {
 		printf("could not initialise device list\n");
@@ -1704,6 +1708,9 @@ int mtdparts_init(void)
 	char tmp_parts[MTDPARTS_MAXLEN];
 
 	debug("\n---mtdparts_init---\n");
+
+//	ADV_WDT_CLEANUP();	
+
 	if (!initialized) {
 		INIT_LIST_HEAD(&mtdids);
 		INIT_LIST_HEAD(&devices);
@@ -1831,6 +1838,8 @@ int mtdparts_init(void)
 		debug("no partition variable set, setting...\n");
 		current_save();
 	}
+
+//	ADV_WDT_CLEANUP();
 
 	return 0;
 }

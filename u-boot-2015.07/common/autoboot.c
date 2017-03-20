@@ -357,6 +357,8 @@ void autoboot_command(const char *s)
 {
 	debug("### main_loop: bootcmd=\"%s\"\n", s ? s : "<UNDEFINED>");
 
+//	ADV_WDT_CLEANUP();
+
 	if (stored_bootdelay != -1 && s && !abortboot(stored_bootdelay)) {
 #if defined(CONFIG_AUTOBOOT_KEYED) && !defined(CONFIG_AUTOBOOT_KEYED_CTRLC)
 		int prev = disable_ctrlc(1);	/* disable Control C checking */
@@ -368,6 +370,8 @@ void autoboot_command(const char *s)
 		disable_ctrlc(prev);	/* restore Control C checking */
 #endif
 	}
+
+//	ADV_WDT_CLEANUP();
 
 #ifdef CONFIG_MENUKEY
 	if (menukey == CONFIG_MENUKEY) {
