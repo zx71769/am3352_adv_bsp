@@ -298,6 +298,7 @@ static void boot_jump_linux(bootm_headers_t *images, int flag)
 		"...\n", (ulong) kernel_entry);
 	bootstage_mark(BOOTSTAGE_ID_RUN_OS);
 	announce_and_cleanup(fake);
+	ADV_WDT_CLEANUP();
 
 	if (IMAGE_ENABLE_OF_LIBFDT && images->ft_len)
 		r2 = (unsigned long)images->ft_addr;
@@ -342,6 +343,7 @@ int do_bootm_linux(int flag, int argc, char * const argv[],
 
 	boot_prep_linux(images);
 	boot_jump_linux(images, flag);
+
 	return 0;
 }
 

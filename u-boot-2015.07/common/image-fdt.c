@@ -192,6 +192,9 @@ int boot_relocate_fdt(struct lmb *lmb, char **of_flat_tree, ulong *of_size)
 	*of_size = of_len;
 
 	set_working_fdt_addr((ulong)*of_flat_tree);
+
+	ADV_WDT_CLEANUP();
+	
 	return 0;
 
 error:

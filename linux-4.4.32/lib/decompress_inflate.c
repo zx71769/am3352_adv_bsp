@@ -200,6 +200,7 @@ STATIC int INIT __decompress(unsigned char *buf, long len,
 			   long *pos,
 			   void (*error)(char *x))
 {
+	putstr("goto The FUNCKING __gunzip\n");
 	return __gunzip(buf, len, fill, flush, out_buf, out_len, pos, error);
 }
 #endif

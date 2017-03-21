@@ -532,15 +532,32 @@ static inline int INIT process_bit1(struct writer *wr, struct rc *rc,
 	return copy_bytes(wr, cst->rep0, len);
 }
 
-
+#define GPIO_DATAOUT		0x013c
+#define GPIO2_BASE			0x481AC000
+#define WDT_OFFSET			0x00400000
+#define GPIO_CLEARDATAOUT	0x0190
+#define GPIO_SETDATAOUT		0x0194
+#define __adv_getl(a)		(*(volatile unsigned int *)(a))
+#define __adv_putl(v, a)	(*(volatile unsigned int *)(a) = (v))
+STATIC inline void adv_decomp_wdt_reset(void)
+{
+	if(__adv_getl(GPIO2_BASE+GPIO_DATAOUT)&WDT_OFFSET)
+		__adv_putl(WDT_OFFSET, GPIO2_BASE+GPIO_CLEARDATAOUT);
+	else
+		__adv_putl(WDT_OFFSET, GPIO2_BASE+GPIO_SETDATAOUT);
+}
+#undef GPIO_DATAOUT
+#undef GPIO2_BASE
+#undef WDT_OFFSET
+#undef GPIO_CLEARDATAOUT
+#undef GPIO_SETDATAOUT
 
 STATIC inline int INIT unlzma(unsigned char *buf, long in_len,
 			      long (*fill)(void*, unsigned long),
 			      long (*flush)(void*, unsigned long),
 			      unsigned char *output,
 			      long *posp,
-			      void(*error)(char *x)
-	)
+			      void(*error)(char *x))
 {
 	struct lzma_header header;
 	int lc, pb, lp;
@@ -631,7 +648,10 @@ STATIC inline int INIT unlzma(unsigned char *buf, long in_len,
 	while (get_pos(&wr) < header.dst_size) {
 		int pos_state =	get_pos(&wr) & pos_state_mask;
 		uint16_t *prob = p + LZMA_IS_MATCH +
-			(cst.state << LZMA_NUM_POS_BITS_MAX) + pos_state;
+				(cst.state << LZMA_NUM_POS_BITS_MAX) + pos_state;
+#ifdef CONFIG_ADVANTECH_AM335x_WDT
+		adv_decomp_wdt_reset();
+#endif
 		if (rc_is_bit_0(&rc, prob)) {
 			if (process_bit0(&wr, &rc, &cst, p, pos_state, prob,
 					lc, literal_pos_mask)) {

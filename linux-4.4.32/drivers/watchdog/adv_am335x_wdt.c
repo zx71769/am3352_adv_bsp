@@ -2,7 +2,6 @@
 #include <linux/moduleparam.h>
 #include <linux/types.h>
 #include <linux/kernel.h>
-#include <linux/miscdevice.h>
 #include <linux/cdev.h>
 #include <linux/watchdog.h>
 #include <linux/fs.h>
@@ -12,9 +11,11 @@
 #include <linux/init.h>
 #include <linux/io.h>
 #include <linux/uaccess.h>
+#include <linux/miscdevice.h>
 #include <asm-generic/gpio.h>
 
 #define DRIVER_NAME "adv_am335x_wdt"
+#define TIMEOUT	40
 
 #define AM335X_CM_PER_GPIO1_CLKCTRL (0x44E00000+0xAC)
 #define AM335X_CM_PER_GPIO2_CLKCTRL (0x44E00000+0xB0)
@@ -35,40 +36,25 @@
 
 #define ADV_WDT_OFFSET  0x00400000  /* GPIO2_22 */
 
+#define READ_WDT()\
+	readl(gpio_base+ADV_GPIO_DATAOUT)&ADV_WDT_OFFSET
+#define WRITE_WDT(val)\
+do{ if(val) writel(ADV_WDT_OFFSET, gpio_base+ADV_GPIO_SETDATAOUT);\
+	else writel(ADV_WDT_OFFSET, gpio_base+ADV_GPIO_CLEARDATAOUT); }while(0)
+
 int wd_enable = 1;
-int wd_count = 40;
+int wd_count = TIMEOUT;
 struct timer_list adv_timer;
 static void __iomem *gpio_base; 
 static void __iomem *prcm_base; 
 
-static inline void _delay(void)
-{
-	int i = 1000;
-	do{}while(i--);
-}
-
 static void adv_wdt_do_reset(void)
 {
-	u32 tmp;
-	
-	tmp = (readl(gpio_base+ADV_GPIO_DATAOUT));
-	pr_info("before set: %d\n", (unsigned int)tmp);
-
-/*
-	iowrite32be(ADV_WDT_OFFSET, (__volatile__ void *)(ADV_GPIO2_BASE+ADV_GPIO_CLEARDATAOUT)); //set 0
-
-	_delay();	
-
-	tmp = (ioread32be((__volatile__ void *)(ADV_GPIO2_BASE+ADV_GPIO_DATAOUT))&ADV_WDT_OFFSET);
-	pr_info("set 0: %d\n", tmp);
-	iowrite32be(ADV_WDT_OFFSET, (__volatile__ void *)(ADV_GPIO2_BASE+ADV_GPIO_SETDATAOUT)); //set 1
-
-	_delay();
-
-	tmp = (ioread32be((__volatile__ void *)(ADV_GPIO2_BASE+ADV_GPIO_DATAOUT))&ADV_WDT_OFFSET);
-	pr_info("set 1: %d\n", tmp);
-*/
-}
+	if(READ_WDT())
+		WRITE_WDT(0);
+	else
+		WRITE_WDT(1);
+}	
 
 static void adv_am335x_wdt_reset_handle(unsigned long data)
 {
@@ -93,31 +79,26 @@ static long adv_am335x_wdt_ioctl(struct file *file,
 								unsigned long arg)
 {
 	pr_info("%s\n", __func__);
-	wd_count = 40;	
+	adv_am335x_wdt_disable();
+	wd_count = TIMEOUT;	
 	return 0;
 }
 
-static int adv_am335x_wdt_open(struct inode *inode, struct file *file)
+static int adv_am335x_wdt_open(struct inode *inode, 
+								struct file *file)
 {
 	pr_info("%s\n", __func__);
-	wd_count = 40;
-
+	wd_count = TIMEOUT;
 	return 0;
 }
 
-static int adv_am335x_wdt_release(struct inode *inode, struct file *file)
+static int adv_am335x_wdt_release(struct inode *inode, 
+									struct file *file)
 {
 	pr_info("%s\n", __func__);
 	wd_count = 0;
-
 	return 0;
 }
-
-static const struct of_device_id adv_am335x_wdt_dt_ids[] = {
-	{ .compatible = "Advantech,adv_wdt", },
-	{ }
-};
-MODULE_DEVICE_TABLE(of, adv_am335x_wdt_dt_ids);
 
 static struct file_operations adv_am335x_wdt_ops = {
 	.owner				= THIS_MODULE,
@@ -126,7 +107,7 @@ static struct file_operations adv_am335x_wdt_ops = {
 	.unlocked_ioctl		= adv_am335x_wdt_ioctl,
 };
 
-static struct miscdevice adv_am335x_wdt_miscdev = {
+static struct miscdevice adv_wdt_miscdev = {
 	.minor	= WATCHDOG_MINOR,
 	.name	= "adv_watchdog",
 	.fops	= &adv_am335x_wdt_ops,
@@ -134,86 +115,75 @@ static struct miscdevice adv_am335x_wdt_miscdev = {
 
 static int wdt_gpio_init(void)
 {
-	if(request_mem_region(ADV_GPIO2_BASE, 
-						ADV_GPIOPAD_MEM_SIZE,
-						"GPIO2_PAD") == NULL)
-	{
-		pr_err("adv watchdog gpio mem request failed!");
-		goto gpio_req_mem_err;
-	}
+	/* 
+	 * In common device-tree(am33xx-dtsi) already define gpio2_pad
+	 * so pinctrl driver already create memory protech region, 
+	 * we don't need to do it again
+	*/
 	gpio_base = ioremap_nocache(ADV_GPIO2_BASE, ADV_GPIOPAD_MEM_SIZE);
 	if(gpio_base == NULL){
 		pr_err("adv watchdog gpio memory mapping failed!\n");
 		goto gpio_map_err;
 	}
 
-	if(request_mem_region(AM335X_CM_PER_GPIO2_CLKCTRL, 
-								AM335X_PRCM_MEM_SIZE, 
-								"GPIO2_PRCM") == NULL)
-	{
-		pr_err("adv watchdog prcm mem request failed!");
-		goto prcm_req_mem_err;
-	}
 	prcm_base = ioremap_nocache(AM335X_CM_PER_GPIO2_CLKCTRL, 
 										AM335X_PRCM_MEM_SIZE);
 	if(prcm_base == NULL){
 		pr_err("adv watchdog gpio prcm memory mapping failed!\n");
 		goto prcm_map_err;
 	}
-	
+	/* 
+	 * Enable GPIO2 PRCM (Power, Reset and Clock Menagement)
+	 * See TRM ch81.12 - CM_PER_GPIO2_CLKCTRL
+	*/    	
 	writel(0x02, prcm_base);
+	/* 
+	 * Set watchdog pin (GPIO2_22) as output 
+	 * See TRM ch25.4 - GPIO_OE
+	*/
 	writel(0xFFFFFFFF&~(ADV_WDT_OFFSET), gpio_base+ADV_GPIO_OE);
-	pr_info("adv watchdog %s success !\n", __func__);
-	
 	return 0;
 
 prcm_map_err:
 	iounmap(prcm_base);
-prcm_req_mem_err:
-	release_mem_region(AM335X_CM_PER_GPIO2_CLKCTRL, AM335X_PRCM_MEM_SIZE);
 gpio_map_err:
 	iounmap(gpio_base);
-gpio_req_mem_err:
-	release_mem_region(ADV_GPIO2_BASE, ADV_GPIOPAD_MEM_SIZE);
-	
 	return -1;
 }
 
-
 static int __init adv_am335x_wdt_init(void)
 {
-	int ret;
+	int err;
 
-	pr_info("Advantech am335x watchdog driver initial\n");
-	
-	ret = misc_register(&adv_am335x_wdt_miscdev);
-	if(ret != 0){
-		pr_err("register miscdev on minor=%d failed (err=%d)\n",
-									WATCHDOG_MINOR, ret);
-		return ret;
+	err = misc_register(&adv_wdt_miscdev);
+	if(err){
+		pr_info("%s: misc register failed, err = %d\n", err);
+		goto misc_err;
 	}
-	pr_info("register miscdev success!\n");
 
-	if(wdt_gpio_init() == -1)
-		return -EIO;
-
-	pr_info("%s: ioremap success!\n", __func__);
+	if(wdt_gpio_init() == -1){
+		err = -EIO;
+		goto gpio_err;
+	}
+	pr_info("%s success!\n", __func__);
 
 	init_timer(&adv_timer);
 	adv_timer.function = adv_am335x_wdt_reset_handle;
 	adv_am335x_wdt_reset_handle(0);
+	return 0;
 
-	return ret;
+gpio_err:
+	misc_deregister(&adv_wdt_miscdev);
+misc_err:
+	return err;
 }
 
 static void __exit adv_am335x_wdt_exit(void)
 {
 	pr_info("%s\n", __func__);
 	iounmap(prcm_base);
-	release_mem_region(AM335X_CM_PER_GPIO2_CLKCTRL, AM335X_PRCM_MEM_SIZE);
 	iounmap(gpio_base);
-	release_mem_region(ADV_GPIO2_BASE, ADV_GPIOPAD_MEM_SIZE);
-	misc_deregister(&adv_am335x_wdt_miscdev);
+	misc_deregister(&adv_wdt_miscdev);
 }
 
 module_init(adv_am335x_wdt_init);

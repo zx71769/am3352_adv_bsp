@@ -516,8 +516,6 @@ struct ctrl_stat {
 #define OMAP_GPIO_SETDATAOUT		0x0194
 
 /* Control Device Register */
-
- /* Control Device Register */
 #define MREQPRIO_0_SAB_INIT1_MASK	0xFFFFFF8F
 #define MREQPRIO_0_SAB_INIT0_MASK	0xFFFFFFF8
 #define MREQPRIO_1_DSS_MASK		0xFFFFFF8F
