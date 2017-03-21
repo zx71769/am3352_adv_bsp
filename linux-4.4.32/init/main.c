@@ -491,27 +491,6 @@ static void __init mm_init(void)
 	ioremap_huge_init();
 }
 
-void adv_wdt_early_reset(void)
-{
-	*(volatile unsigned int *)(0x44E000AC) = 0x02;
-	*(volatile unsigned int *)(0x481AC134) = 0xFFFFFFFF&~(0x00400000);
-
-	if(*(volatile unsigned int *)(0x481AC13C)){
-		*(volatile unsigned int *)(0x481AC190) = 0x00400000;
-	}else{
-		*(volatile unsigned int *)(0x481AC194) = 0x00400000;
-	}
-
-/*	
-	__raw_writel(0x02, 0x44E000AC);
-	__raw_writel(0xFFFFFFFF&~(0x00400000), 0x481AC134);
-	if(__raw_readl(0x481AC13C))
-		__raw_writel(0x00400000, 0x481AC190);
-	else
-		__raw_writel(0x00400000, 0x481AC194);
-*/
-}
-
 asmlinkage __visible void __init start_kernel(void)
 {
 	char *command_line;
