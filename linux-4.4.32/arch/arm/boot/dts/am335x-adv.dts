@@ -294,43 +294,35 @@
 		#size-cells = <1>;
 		partition@0 {
 			label = "NAND.SPL";
-			reg = <0x00000000 0x000020000>;
+			reg = <0x00000000 0x000020000>; /* 128k */
 		};
 		partition@1 {
-			label = "NAND.SPL.backup1";
-			reg = <0x00020000 0x00020000>;
+			label = "NAND.dtb";
+			reg = <0x00020000 0x00020000>; /* 128k */
 		};
 		partition@2 {
-			label = "NAND.SPL.backup2";
-			reg = <0x00040000 0x00020000>;
+			label = "NAND.u-boot";
+			reg = <0x00040000 0x00100000>; /* 1m */
 		};
 		partition@3 {
-			label = "NAND.SPL.backup3";
-			reg = <0x00060000 0x00020000>;
+			label = "NAND.u-boot-env";
+			reg = <0x00140000 0x00020000>; /* 128k */
 		};
 		partition@4 {
-			label = "NAND.u-boot-spl-os";
-			reg = <0x00080000 0x00040000>;
+			label = "NAND.kernel1";
+			reg = <0x00160000 0x00400000>; /* 4m */
 		};
 		partition@5 {
-			label = "NAND.u-boot";
-			reg = <0x000C0000 0x00100000>;
+			label = "NAND.file-system1";
+			reg = <0x00560000 0x01000000>; /* 16m */
 		};
 		partition@6 {
-			label = "NAND.u-boot-env";
-			reg = <0x001C0000 0x00020000>;
+			label = "NAND.kernel2";
+			reg = <0x01560000 0x00400000>; /* 4m */
 		};
 		partition@7 {
-			label = "NAND.u-boot-env.backup1";
-			reg = <0x001E0000 0x00020000>;
-		};
-		partition@8 {
-			label = "NAND.kernel";
-			reg = <0x00200000 0x00800000>;
-		};
-		partition@9 {
-			label = "NAND.file-system";
-			reg = <0x00A00000 0x07600000>;
+			label = "NAND.file-system2";
+			reg = <0x01960000 0x01000000>; /* 16m */
 		};
 	};
 	

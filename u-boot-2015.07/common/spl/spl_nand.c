@@ -14,15 +14,9 @@
 void spl_nand_load_image(void)
 {
 	nand_init();
-#ifdef CONFIG_TARGET_AM335X_ADVANTECH
-	nand_spl_load_image(CONFIG_SYS_ADV_NAND_U_BOOT_OFFS,
-			    CONFIG_SYS_ADV_NAND_U_BOOT_SIZE,
-			    (void *)CONFIG_SYS_NAND_U_BOOT_DST);
-#else
-	nand_spl_load_image(CONFIG_SYS_NAND_U_BOOT_OFFS,
-			    CONFIG_SYS_NAND_U_BOOT_SIZE,
-			    (void *)CONFIG_SYS_NAND_U_BOOT_DST);
-#endif
+	nand_spl_load_image(CONFIG_SYS_NAND_U_BOOT_OFFS, 
+						CONFIG_SYS_NAND_U_BOOT_SIZE,
+					(void *)CONFIG_SYS_NAND_U_BOOT_DST);
 	spl_set_header_raw_uboot();
 	nand_deselect();
 }
@@ -32,6 +26,7 @@ void spl_nand_load_image(void)
 	struct image_header *header;
 	int *src __attribute__((unused));
 	int *dst __attribute__((unused));
+	
 
 	debug("spl: nand - using hw ecc\n");
 	nand_init();
@@ -93,21 +88,12 @@ void spl_nand_load_image(void)
 #endif
 #endif
 	/* Load u-boot */
-#ifdef CONFIG_TARGET_AM335X_ADVANTECH
-	nand_spl_load_image(CONFIG_SYS_ADV_NAND_U_BOOT_OFFS,
+	nand_spl_load_image(CONFIG_SYS_NAND_U_BOOT_OFFS, 
 						sizeof(*header), (void *)header);
 	spl_parse_image_header(header);
-	nand_spl_load_image(CONFIG_SYS_ADV_NAND_U_BOOT_OFFS,
+	nand_spl_load_image(CONFIG_SYS_NAND_U_BOOT_OFFS, 
 						spl_image.size, 
-					(void *)(unsigned long)spl_image.load_addr);
-#else
-	nand_spl_load_image(CONFIG_SYS_NAND_U_BOOT_OFFS,
-						sizeof(*header), (void *)header);
-	spl_parse_image_header(header);
-	nand_spl_load_image(CONFIG_SYS_NAND_U_BOOT_OFFS,
-						spl_image.size, 
-					(void *)(unsigned long)spl_image.load_addr);
-#endif
+				(void *)(unsigned long)spl_image.load_addr);
 	nand_deselect();
 }
 #endif

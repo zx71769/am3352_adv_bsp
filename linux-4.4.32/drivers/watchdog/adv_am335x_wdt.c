@@ -157,7 +157,7 @@ static int __init adv_am335x_wdt_init(void)
 
 	err = misc_register(&adv_wdt_miscdev);
 	if(err){
-		pr_info("%s: misc register failed, err = %d\n", err);
+		pr_info("%s: misc register failed, err = %d\n", __func__, err);
 		goto misc_err;
 	}
 
@@ -165,11 +165,12 @@ static int __init adv_am335x_wdt_init(void)
 		err = -EIO;
 		goto gpio_err;
 	}
-	pr_info("%s success!\n", __func__);
 
 	init_timer(&adv_timer);
 	adv_timer.function = adv_am335x_wdt_reset_handle;
 	adv_am335x_wdt_reset_handle(0);
+	pr_info("Advantech watchdog timer init success!\n");
+
 	return 0;
 
 gpio_err:

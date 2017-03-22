@@ -12,7 +12,7 @@
  * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- *	======== For Advantech crop. ICG custom board ========
+ *	======== For Advantech crop. device server am335x series ========
  */
 
 #ifndef __CONFIG_AM335X_EVM_H
@@ -56,12 +56,12 @@
 		"${optargs} " \
 		"root=${nandroot} " \
 		"rootfstype=${nandrootfstype}\0" \
-	"nandroot=ubi0:rootfs rw ubi.mtd=NAND.file-system,2048\0" \
+	"nandroot=ubi0:rootfs rw ubi.mtd=5,2048\0" \
 	"nandrootfstype=ubifs rootwait=1\0" \
 	"nandboot=echo Booting from nand ...; " \
 		"run nandargs; " \
-		"nand read ${fdtaddr} NAND.u-boot-spl-os; " \
-		"nand read ${loadaddr} NAND.kernel; " \
+		"nand read ${fdtaddr} NAND.dtb; " \
+		"nand read ${loadaddr} NAND.kernel1; " \
 		"bootz ${loadaddr} - ${fdtaddr}\0"
 /* UBIFS */
 #define CONFIG_CMD_UBI
@@ -204,22 +204,23 @@
 #define CONFIG_SYS_NAND_ECCBYTES	14
 #define CONFIG_SYS_NAND_ONFI_DETECTION
 #define CONFIG_NAND_OMAP_ECCSCHEME	OMAP_ECC_BCH8_CODE_HW
-#define MTDIDS_DEFAULT			"nand0=nand.0"
-#define MTDPARTS_DEFAULT		"mtdparts=nand.0:" \
-					"128k(NAND.SPL)," \
-					"128k(NAND.SPL.backup1)," \
-					"128k(NAND.SPL.backup2)," \
-					"128k(NAND.SPL.backup3)," \
-					"256k(NAND.u-boot-spl-os)," \
-					"1m(NAND.u-boot)," \
-					"128k(NAND.u-boot-env)," \
-					"128k(NAND.u-boot-env.backup1)," \
-					"8m(NAND.kernel)," \
-					"-(NAND.file-system)"
-#define CONFIG_SYS_NAND_U_BOOT_OFFS			0x000c0000
-/* Advantech U-Boot Nand */
-#define CONFIG_SYS_ADV_NAND_U_BOOT_OFFS		0x000c0000
-#define CONFIG_SYS_ADV_NAND_U_BOOT_SIZE		0x000100000
+#define MTDIDS_DEFAULT		"nand0=nand.0"
+#define MTDPARTS_DEFAULT	"mtdparts=nand.0:" \
+							"128k(NAND.SPL)," \
+							"128k(NAND.dtb)," \
+							"1m(NAND.u-boot)," \
+							"128k(NAND.u-boot-env)," \
+							"4m(NAND.kernel1)," \
+							"16m(NAND.file-system1)," \
+							"4m(NAND.kernel2)," \
+							"16m(NAND.file-system2)" \
+
+/* Advantech U-Boot offset & size */
+#define CONFIG_SYS_ADV_NAND_U_BOOT_OFFS		0x00040000
+#define CONFIG_SYS_ADV_NAND_U_BOOT_SIZE		0x000100000	/* 1m */
+/* The orgi U-Boot offset & size */
+#define CONFIG_SYS_NAND_U_BOOT_OFFS		CONFIG_SYS_ADV_NAND_U_BOOT_OFFS
+#define CONFIG_SYS_NAND_U_BOOT_SIZE		CONFIG_SYS_ADV_NAND_U_BOOT_SIZE	
 /* NAND: SPL related configs */
 #ifdef CONFIG_SPL_NAND_SUPPORT
 #define CONFIG_SPL_NAND_AM33XX_BCH
@@ -268,13 +269,13 @@
 #define DFU_ALT_INFO_NAND \
 	"dfu_alt_info_nand=" \
 	"SPL part 0 1;" \
-	"SPL.backup1 part 0 2;" \
-	"SPL.backup2 part 0 3;" \
-	"SPL.backup3 part 0 4;" \
-	"u-boot part 0 5;" \
-	"u-boot-spl-os part 0 6;" \
-	"kernel part 0 8;" \
-	"rootfs part 0 9\0"
+	"dtb part 0 2;"	\
+	"u-boot part 0 3;" \
+	"u-boot-env part 0 4;" \
+	"kernel1 part 0 5;" \
+	"rootfs1 part 0 6;" \
+	"kernel2 part 0 7;" \
+	"rootfs2 part 0 8\0"
 #define CONFIG_DFU_RAM
 #define DFU_ALT_INFO_RAM \
 	"dfu_alt_info_ram=" \
@@ -312,10 +313,10 @@
 #define CONFIG_ENV_OFFSET		(768 << 10) /* 768 KiB in */
 #define CONFIG_ENV_OFFSET_REDUND	(896 << 10) /* 896 KiB in */
 #define MTDIDS_DEFAULT			"nor0=m25p80-flash.0"
-#define MTDPARTS_DEFAULT		"mtdparts=m25p80-flash.0:128k(SPL)," \
-					"512k(u-boot),128k(u-boot-env1)," \
-					"128k(u-boot-env2),3464k(kernel)," \
-					"-(rootfs)"
+#define MTDPARTS_DEFAULT	"mtdparts=m25p80-flash.0:128k(SPL)," \
+							"512k(u-boot),128k(u-boot-env1)," \
+							"128k(u-boot-env2),3464k(kernel)," \
+							"-(rootfs)"
 #elif defined(CONFIG_EMMC_BOOT)
 #define CONFIG_ENV_IS_IN_MMC
 #define CONFIG_SPL_ENV_SUPPORT
@@ -342,7 +343,6 @@
 #define CONFIG_SF_DEFAULT_SPEED		24000000
 
 /* Network. */
-#define CONFIG_PHY_GIGE
 #define CONFIG_PHYLIB
 #define CONFIG_PHY_SMSC
 
