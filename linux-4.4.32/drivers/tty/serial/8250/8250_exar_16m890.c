@@ -32,9 +32,6 @@
 #include <asm/io.h>
 #include <asm/irq.h>
 
-#include <linux/gpio.h>
-#include <linux/of_gpio.h>
-
 #include "8250.h"
 
 static const struct serial8250_config xr_config [] = {
@@ -290,6 +287,86 @@ out:
 }
 EXPORT_SYMBOL_GPL(serialxr_startup);
 
+/*
+ * Reference by serial8250_compute_lcr() form 8250_port.c
+ * 
+ * no portdata[] & fifo_bug
+*/ 
+static unsigned char 
+_serialxr_compute_lcr(struct uart_8250_port *port, tcflag_t c_cflag)
+{
+	unsigned char cval;
+	
+	switch (c_cflag & CSIZE) {
+		case CS5:
+			cval = UART_LCR_WLEN5;
+			break;
+		case CS6:
+			cval = UART_LCR_WLEN6;
+			break;
+		case CS7:
+			cval = UART_LCR_WLEN7;
+			break;
+		default:
+		case CS8:
+			cval = UART_LCR_WLEN8;
+			break;
+	}
+	
+	if (c_cflag & CSTOPB)
+		cval |= UART_LCR_STOP;
+	
+	if (c_cflag & PARENB)
+		cval |= UART_LCR_PARITY;
+	
+	if (!(c_cflag & PARODD))
+		cval |= UART_LCR_EPAR;
+#ifdef CMSPAR
+	if (c_cflag & CMSPAR)
+		cval |= UART_LCR_SPAR;
+#endif
+	
+	return cval;
+}
+
+/*
+ * Reference by serial8250_get_baud_rate() from 8250_port.c 
+*/
+static inline unsigned int _serialxr_get_baud_rate(struct uart_port *port,
+									struct ktermios *termios,
+									struct ktermios * old)
+{
+	unsigned int tolerance = port->uartclk / 100;
+	
+	/*
+	 * Ask the core to calculate the divisor for us.
+	 * Allow 1% tolerance at the upper limit so uart clks marginally
+	 * slower than nominal still match standard baud rates without
+	 * causing transmission errors.
+	 */
+	return uart_get_baud_rate(port, termios, old,
+							port->uartclk/16/0xffff,
+							(port->uartclk + tolerance)/16);
+}
+
+static void _serialxr_set_divisor(struct uart_port *port,
+									unsigned int baud,
+									unsigned int quot,
+									unsigned int quot_frac)
+{
+	struct uart_8250_port *up = up_to_u8250p(port);
+
+	/*
+	 * TODO:
+	 * 1. rs232/422/485 externsion EFR setting
+	 * 2. DLL/DLM setting
+	 * 3. UART_DLD
+	*/
+	serial_port_out(port, UART_LCR, up->lcr|UART_LCR_DLAB);
+	serial_dl_write(up, quot);
+}
+
+#define _serialxr_get_divisor(port, baud)	uart_get_divisor(port, baud)
 void serialxr_set_termios(struct uart_port *port, 
 							struct ktermios *termios,
 		          			struct ktermios *old)
@@ -301,10 +378,9 @@ void serialxr_set_termios(struct uart_port *port,
 
 	pr_info("=== %s ===\n", __func__);
 
-	cval = serial8250_compute_lcr(up, termios->c_cflag);
-
-	baud = serial8250_get_baud_rate(port, termios, old);
-	quot = serial8250_get_divisor(up, baud, &frac);
+	cval = _serialxr_compute_lcr(up, termios->c_cflag);
+	baud = _serialxr_get_baud_rate(port, termios, old);
+	quot = _serialxr_get_divisor(port, baud);
 
 	/*
 	 * Ok, we're now changing the port state.  Do it with
@@ -401,7 +477,7 @@ void serialxr_set_termios(struct uart_port *port,
 			serial_port_out(port, UART_EFR, efr);
 	}
 
-	serial8250_set_divisor(port, baud, quot, frac);
+	_serialxr_set_divisor(port, baud, quot, frac);
 
 	/*
 	 * LCR DLAB must be set to enable 64-byte FIFO mode. If the FCR
@@ -417,7 +493,7 @@ void serialxr_set_termios(struct uart_port *port,
 			serial_port_out(port, UART_FCR, UART_FCR_ENABLE_FIFO);
 		serial_port_out(port, UART_FCR, up->fcr);	/* set fcr */
 	}
-	serial8250_set_mctrl(port, port->mctrl);
+	serialxr_set_mctrl(port, port->mctrl);
 	spin_unlock_irqrestore(&port->lock, flags);
 	serial8250_rpm_put(up);
 
