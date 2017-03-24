@@ -29,5 +29,7 @@ obj-$(CONFIG_SERIAL_8250_UNIPHIER)	+= 8250_uniphier.o
 obj-$(CONFIG_SERIAL_8250_INGENIC)	+= 8250_ingenic.o
 obj-$(CONFIG_SERIAL_8250_MID)		+= 8250_mid.o
 obj-$(CONFIG_SERIAL_8250_KEYSTONE)	+= 8250_keystone.o
+obj-$(CONFIG_SERIAL_8250_EXAR_16M890)		+= 8250_exar_16m890.o
+
 
 CFLAGS_8250_ingenic.o += -I$(srctree)/scripts/dtc/libfdt

@@ -2092,8 +2092,7 @@ static int gpmc_probe_generic_child(struct platform_device *pdev,
 
 	/* Enable CS region */
 	gpmc_cs_enable_mem(cs);
-	pr_info("GPMC [%s]chip-select %d enable success!", 
-										child->name, cs);
+	pr_info("GPMC [%s]cs %d enable success!\n", child->name, cs);
 
 no_timings:
 

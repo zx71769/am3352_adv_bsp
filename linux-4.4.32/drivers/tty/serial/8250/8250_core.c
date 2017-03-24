@@ -1034,6 +1034,18 @@ int serial8250_register_8250_port(struct uart_8250_port *up)
 		if (up->dl_write)
 			uart->dl_write = up->dl_write;
 
+		/* 
+		 * For Advantech EKI:
+		 * override the ops to xr16m890 specifically 
+		*/
+		if(uart->port.type == PORT_XR16M890){
+			uart->port.startup = serialxr_startup;
+			uart->port.set_termios = serialxr_set_termios;
+			uart->port.set_mctrl = serialxr_set_mctrl;
+			uart->port.serial_in = serialxr_in;
+			uart->port.serial_out = serialxr_out;
+		}
+
 		if (uart->port.type != PORT_8250_CIR) {
 			if (serial8250_isa_config != NULL)
 				serial8250_isa_config(0, &uart->port,

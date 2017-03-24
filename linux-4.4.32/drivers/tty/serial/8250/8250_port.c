@@ -96,7 +96,15 @@ static const struct serial8250_config uart_config[] = {
 		.tx_loadsz	= 16,
 		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_10,
 		.rxtrig_bytes	= {1, 4, 8, 14},
-		.flags		= UART_CAP_FIFO,
+		.flags		= UART_CAP_FIFO, 
+	},
+	[PORT_XR16M890] = {
+		.name		= "xr16m890",
+		.fifo_size	= 128,
+		.tx_loadsz	= 128,
+		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_10,
+		.rxtrig_bytes	= {1, 4, 8, 14},
+		.flags		= UART_CAP_FIFO, /* uart has fifo */
 	},
 	[PORT_CIRRUS] = {
 		.name		= "Cirrus",
@@ -419,7 +427,7 @@ static void io_serial_out(struct uart_port *p, int offset, int value)
 static int serial8250_default_handle_irq(struct uart_port *port);
 static int exar_handle_irq(struct uart_port *port);
 
-static void set_io_from_upio(struct uart_port *p)
+void set_io_from_upio(struct uart_port *p)
 {
 	struct uart_8250_port *up = up_to_u8250p(p);
 
@@ -465,8 +473,9 @@ static void set_io_from_upio(struct uart_port *p)
 	up->cur_iotype = p->iotype;
 	p->handle_irq = serial8250_default_handle_irq;
 }
+EXPORT_SYMBOL_GPL(set_io_from_upio);
 
-static void
+void
 serial_port_out_sync(struct uart_port *p, int offset, int value)
 {
 	switch (p->iotype) {
@@ -481,6 +490,7 @@ serial_port_out_sync(struct uart_port *p, int offset, int value)
 		p->serial_out(p, offset, value);
 	}
 }
+EXPORT_SYMBOL_GPL(serial_port_out_sync);
 
 /*
  * For the 16C950
@@ -506,7 +516,7 @@ static unsigned int serial_icr_read(struct uart_8250_port *up, int offset)
 /*
  * FIFO support.
  */
-static void serial8250_clear_fifos(struct uart_8250_port *p)
+void serial8250_clear_fifos(struct uart_8250_port *p)
 {
 	if (p->capabilities & UART_CAP_FIFO) {
 		serial_out(p, UART_FCR, UART_FCR_ENABLE_FIFO);
@@ -515,6 +525,7 @@ static void serial8250_clear_fifos(struct uart_8250_port *p)
 		serial_out(p, UART_FCR, 0);
 	}
 }
+EXPORT_SYMBOL_GPL(serial8250_clear_fifos);
 
 void serial8250_clear_and_reinit_fifos(struct uart_8250_port *p)
 {
@@ -1190,9 +1201,13 @@ static void autoconfig(struct uart_8250_port *up)
 	/*
 	 * Only probe for RSA ports if we got the region.
 	 */
-	if (port->type == PORT_16550A && up->probe & UART_PROBE_RSA &&
-	    __enable_rsa(up))
+	if (port->type == PORT_16550A || 
+			port->type == PORT_XR16M890 && 
+			up->probe & UART_PROBE_RSA &&
+	    	__enable_rsa(up))
+	{
 		port->type = PORT_RSA;
+	}
 #endif
 
 	serial_out(up, UART_LCR, save_lcr);
@@ -1319,9 +1334,10 @@ static void serial8250_start_tx(struct uart_port *port)
 {
 	struct uart_8250_port *up = up_to_u8250p(port);
 
-	if(port->type == PORT_16550A)
-//		adv_mcr_loopback(port);
-
+/*
+	if(port->type == PORT_XR16M890)
+		adv_mcr_loopback(port);
+*/
 	serial8250_rpm_get_tx(up);
 
 	if (up->dma && !up->dma->tx_dma(up))
@@ -1343,7 +1359,9 @@ static void serial8250_start_tx(struct uart_port *port)
 	/*
 	 * Re-enable the transmitter if we disabled it.
 	 */
-	if (port->type == PORT_16C950 && up->acr & UART_ACR_TXDIS) {
+	if (port->type == PORT_16C950 && 
+			up->acr & UART_ACR_TXDIS) 
+	{
 		up->acr &= ~UART_ACR_TXDIS;
 		serial_icr_write(up, UART_ACR, up->acr);
 	}
@@ -1700,6 +1718,7 @@ static void serial8250_set_mctrl(struct uart_port *port, unsigned int mctrl)
 	if (port->set_mctrl)
 		port->set_mctrl(port, mctrl);
 	else
+		//XXX: need to go here!
 		serial8250_do_set_mctrl(port, mctrl);
 }
 
@@ -1722,7 +1741,7 @@ static void serial8250_break_ctl(struct uart_port *port, int break_state)
 /*
  *	Wait for transmitter & holding register to empty
  */
-static void wait_for_xmitr(struct uart_8250_port *up, int bits)
+void wait_for_xmitr(struct uart_8250_port *up, int bits)
 {
 	unsigned int status, tmout = 10000;
 
@@ -1752,6 +1771,7 @@ static void wait_for_xmitr(struct uart_8250_port *up, int bits)
 		}
 	}
 }
+EXPORT_SYMBOL_GPL(wait_for_xmitr);
 #ifdef CONFIG_CONSOLE_POLL
 /*
  * Console polling routines for writing and reading from the uart while
@@ -1857,20 +1877,23 @@ int serial8250_do_startup(struct uart_port *port)
 	keystone_serial8250_init(port);
 #endif
 
+	/*
+	 * XR16M890:
+	 * Wakeup and initilaize UART 
+	*/
 	if (port->type == PORT_XR17V35X) {
 		/*
 		 * First enable access to IER [7:5], ISR [5:4], FCR [5:4],
 		 * MCR [7:5] and MSR [7:0]
 		 */
 		serial_port_out(port, UART_XR_EFR, UART_EFR_ECB);
-
 		/*
 		 * Make sure all interrups are masked until initialization is
 		 * complete and the FIFOs are cleared
 		 */
 		serial_port_out(port, UART_IER, 0);
+		serial_port_out(port, UART_LCR, 0);
 	}
-
 	/*
 	 * Clear the FIFO buffers and disable them.
 	 * (they will be reenabled in set_termios())
@@ -1884,7 +1907,6 @@ int serial8250_do_startup(struct uart_port *port)
 	serial_port_in(port, UART_RX);
 	serial_port_in(port, UART_IIR);
 	serial_port_in(port, UART_MSR);
-
 	/*
 	 * At this point, there's no way the LSR could still be 0xff;
 	 * if it is, then bail out, because there's likely no UART
@@ -1900,7 +1922,7 @@ int serial8250_do_startup(struct uart_port *port)
 	}
 
 	/*
-	 * For a XR16C850, we need to set the trigger levels
+	 * For a XR16C850 only!! need to set the trigger levels
 	 */
 	if (port->type == PORT_16850) {
 		unsigned char fctr;
@@ -1920,6 +1942,7 @@ int serial8250_do_startup(struct uart_port *port)
 
 	if (port->irq) {
 		unsigned char iir1;
+//		pr_info("Port has IRQ!!!\n");
 		/*
 		 * Test for UARTs that do not reassert THRE when the
 		 * transmitter is idle and the interrupt has already
@@ -1952,7 +1975,8 @@ int serial8250_do_startup(struct uart_port *port)
 		 * on a regular basis.
 		 */
 		if ((!(iir1 & UART_IIR_NO_INT) && (iir & UART_IIR_NO_INT)) ||
-		    up->port.flags & UPF_BUG_THRE) {
+		    up->port.flags & UPF_BUG_THRE) 
+		{
 			up->bugs |= UART_BUG_THRE;
 		}
 	}
@@ -2536,7 +2560,7 @@ static int serial8250_request_std_resource(struct uart_8250_port *up)
 			}
 		}
 		/* try to do gpio things */
-		if(port->type == PORT_16550A)
+		if(port->type == PORT_XR16M890)
 			adv_gpio_sel(port->dev->of_node, port);
 		break;
 
@@ -2753,6 +2777,9 @@ static void serial8250_config_port(struct uart_port *port, int flags)
 
 	/* if access method is AU, it is a 16550 with a quirk */
 	if (port->type == PORT_16550A && port->iotype == UPIO_AU)
+		up->bugs |= UART_BUG_NOMSR;
+
+	if(port->type == PORT_XR16M890 && port->iotype == UPIO_AU)
 		up->bugs |= UART_BUG_NOMSR;
 
 	/* HW bugs may trigger IRQ while IIR == NO_INT */

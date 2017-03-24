@@ -570,7 +570,7 @@ static struct platform_driver elm_driver = {
 	.remove	= elm_remove,
 };
 
-module_platform_driver(elm_driver);
+b4_module_platform_driver(elm_driver);
 
 MODULE_DESCRIPTION("ELM driver for BCH error correction");
 MODULE_AUTHOR("Texas Instruments");

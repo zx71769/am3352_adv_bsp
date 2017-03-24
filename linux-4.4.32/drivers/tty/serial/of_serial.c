@@ -196,6 +196,7 @@ static int of_platform_serial_probe(struct platform_device *ofdev)
 
 	switch (port_type) {
 #ifdef CONFIG_SERIAL_8250
+	case PORT_XR16M890:
 	case PORT_8250 ... PORT_MAX_8250:
 	{
 		struct uart_8250_port port8250;
@@ -218,10 +219,11 @@ static int of_platform_serial_probe(struct platform_device *ofdev)
 		ret = nwpserial_register_port(&port);
 		break;
 #endif
+		
 	default:
 		/* need to add code for these */
 	case PORT_UNKNOWN:
-		dev_info(&ofdev->dev, "Unknown serial port found, ignored\n");
+		dev_info(&ofdev->dev, "unknown serial port found, ignored\n");
 		ret = -ENODEV;
 		break;
 	}
@@ -338,7 +340,6 @@ static const struct of_device_id of_platform_serial_table[] = {
 	{ .compatible = "ns16450",  .data = (void *)PORT_16450, },
 	{ .compatible = "ns16550a", .data = (void *)PORT_16550A, },
 	{ .compatible = "ns16550",  .data = (void *)PORT_16550, },
-	{ .compatible = "exar,16m890",  .data = (void *)PORT_16550A},
 	{ .compatible = "ns16750",  .data = (void *)PORT_16750, },
 	{ .compatible = "ns16850",  .data = (void *)PORT_16850, },
 	{ .compatible = "nvidia,tegra20-uart", .data = (void *)PORT_TEGRA, },
@@ -349,6 +350,8 @@ static const struct of_device_id of_platform_serial_table[] = {
 	{ .compatible = "altr,16550-FIFO128", .data = (void *)PORT_ALTR_16550_F128, },
 	{ .compatible = "mrvl,mmp-uart", .data = (void *)PORT_XSCALE, },
 	{ .compatible = "mrvl,pxa-uart", .data = (void *)PORT_XSCALE, },
+	{ .compatible = "exar,16m890",  .data = (void *)PORT_XR16M890, },
+//	{ .compatible = "exar,16m890",  .data = (void *)PORT_16550A, },
 #ifdef CONFIG_SERIAL_OF_PLATFORM_NWPSERIAL
 	{ .compatible = "ibm,qpace-nwp-serial", .data = (void *)PORT_NWPSERIAL, },
 #endif

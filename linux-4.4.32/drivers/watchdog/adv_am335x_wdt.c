@@ -34,19 +34,26 @@
 #define ADV_GPIO3_BASE 0x481AE000
 #define ADV_GPIOPAD_MEM_SIZE 0x2000
 
-#define ADV_WDT_OFFSET  0x00400000  /* GPIO2_22 */
+#define ADV_WDT_OFFS  1<<22	/* GPIO2_22 */
 
 #define READ_WDT()\
-	readl(gpio_base+ADV_GPIO_DATAOUT)&ADV_WDT_OFFSET
+	readl(gpio_base+ADV_GPIO_DATAOUT)&ADV_WDT_OFFS
 #define WRITE_WDT(val)\
-do{ if(val) writel(ADV_WDT_OFFSET, gpio_base+ADV_GPIO_SETDATAOUT);\
-	else writel(ADV_WDT_OFFSET, gpio_base+ADV_GPIO_CLEARDATAOUT); }while(0)
+do{ if(val) writel(ADV_WDT_OFFS, gpio_base+ADV_GPIO_SETDATAOUT);\
+	else writel(ADV_WDT_OFFS, gpio_base+ADV_GPIO_CLEARDATAOUT); }while(0)
 
 int wd_enable = 1;
 int wd_count = TIMEOUT;
 struct timer_list adv_timer;
 static void __iomem *gpio_base; 
-static void __iomem *prcm_base; 
+static void __iomem *prcm_base;
+struct adv_wdt_driver{
+	dev_t devt;
+	struct cdev cdev;
+	struct class *class;
+	struct device *device;
+};
+struct adv_wdt_driver wdt; 
 
 static void adv_wdt_do_reset(void)
 {
@@ -107,11 +114,17 @@ static struct file_operations adv_am335x_wdt_ops = {
 	.unlocked_ioctl		= adv_am335x_wdt_ioctl,
 };
 
-static struct miscdevice adv_wdt_miscdev = {
-	.minor	= WATCHDOG_MINOR,
-	.name	= "adv_watchdog",
-	.fops	= &adv_am335x_wdt_ops,
-}; 
+static void _cdev_exit(void)
+{
+	cdev_del(&wdt.cdev);
+	unregister_chrdev_region(wdt.devt, 1);
+}
+
+static void _class_exit(void)
+{
+	class_unregister(wdt.class);
+	class_destroy(wdt.class);
+}
 
 static int wdt_gpio_init(void)
 {
@@ -141,7 +154,7 @@ static int wdt_gpio_init(void)
 	 * Set watchdog pin (GPIO2_22) as output 
 	 * See TRM ch25.4 - GPIO_OE
 	*/
-	writel(0xFFFFFFFF&~(ADV_WDT_OFFSET), gpio_base+ADV_GPIO_OE);
+	writel(0xFFFFFFFF&~(ADV_WDT_OFFS), gpio_base+ADV_GPIO_OE);
 	return 0;
 
 prcm_map_err:
@@ -151,32 +164,84 @@ gpio_map_err:
 	return -1;
 }
 
+static int _cdev_init(void)
+{
+	int err;
+	int major = 0;
+	int minor = 0;
+
+	wdt.devt = MKDEV(major, minor);
+	if(major){
+		err = register_chrdev_region(wdt.devt, 1, "adv_wdt");
+	}else{
+		//dynamic get driver number
+		err = alloc_chrdev_region(&wdt.devt, minor, 1, "adv_wdt");
+		major = MAJOR(wdt.devt);
+	}
+	if(err){
+		pr_err("Advantech wdt get MAJOR number failed, err=%d\n", err);
+		return err;
+	}
+	
+	cdev_init(&wdt.cdev, &adv_am335x_wdt_ops);
+	wdt.cdev.owner = THIS_MODULE;
+	wdt.cdev.ops = &adv_am335x_wdt_ops;
+	err = cdev_add(&wdt.cdev, wdt.devt, 1);
+	if(err){
+		pr_err("Advnatech wdt cdev add failed, err=%d\n", err);
+		return err;
+	}
+	
+	return 0;	
+}
+
+static int _device_init(void)
+{
+	int err;
+	
+	wdt.class = class_create(THIS_MODULE, "adv_wdt_class");
+	if(IS_ERR(wdt.class)){
+		err = PTR_ERR(wdt.class);
+		pr_err("Advantech wdt create class failed, err=%d\n", err);
+		goto class_failed;
+	}
+	
+	wdt.device = device_create(wdt.class, NULL, 
+								wdt.devt, NULL, "adc_wdt_device");
+	if(IS_ERR(wdt.device)){
+		err = PTR_ERR(wdt.device);
+		pr_err("Advantech wdt create device failed, err=%d\n", err);
+		goto device_failed;
+	}
+	return 0;
+
+device_failed:
+	_class_exit();
+class_failed:
+	_cdev_exit();
+	return err;
+}
+
 static int __init adv_am335x_wdt_init(void)
 {
 	int err;
+	
+	err = _cdev_init();
+	if(err) return err;
 
-	err = misc_register(&adv_wdt_miscdev);
-	if(err){
-		pr_info("%s: misc register failed, err = %d\n", __func__, err);
-		goto misc_err;
-	}
+	err = _device_init();
+	if(err) return err;
 
-	if(wdt_gpio_init() == -1){
-		err = -EIO;
-		goto gpio_err;
-	}
+	err = wdt_gpio_init();
+	if(err) return -EIO;	
 
 	init_timer(&adv_timer);
 	adv_timer.function = adv_am335x_wdt_reset_handle;
 	adv_am335x_wdt_reset_handle(0);
+	
 	pr_info("Advantech watchdog timer init success!\n");
 
 	return 0;
-
-gpio_err:
-	misc_deregister(&adv_wdt_miscdev);
-misc_err:
-	return err;
 }
 
 static void __exit adv_am335x_wdt_exit(void)
@@ -184,10 +249,12 @@ static void __exit adv_am335x_wdt_exit(void)
 	pr_info("%s\n", __func__);
 	iounmap(prcm_base);
 	iounmap(gpio_base);
-	misc_deregister(&adv_wdt_miscdev);
+	device_destroy(wdt.class, wdt.devt);
+	_class_exit();
+	_cdev_exit();
 }
 
-module_init(adv_am335x_wdt_init);
+postcore_initcall(adv_am335x_wdt_init);
 module_exit(adv_am335x_wdt_exit);
 
 MODULE_LICENSE("GPL");

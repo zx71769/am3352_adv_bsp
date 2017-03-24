@@ -225,6 +225,16 @@ config SERIAL_8250_EXAR_ST16C554
 	  To compile this driver as a module, choose M here: the module
 	  will be called 8250_exar_st16c554.
 
+config SERIAL_8250_EXAR_16M890
+	tristate "Support Exar 16M890 UART"
+	depends on SERIAL_8250 != n
+	help
+	  say Y here if you use exar 16M890 uart!
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called 8250_exar_16M890.
+
+
 config SERIAL_8250_HUB6
 	tristate "Support Hub6 cards"
 	depends on SERIAL_8250 != n && ISA && SERIAL_8250_MANY_PORTS

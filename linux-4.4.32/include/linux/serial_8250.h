@@ -160,5 +160,4 @@ int serial8250_console_setup(struct uart_port *port, char *options, bool probe);
 extern void serial8250_set_isa_configurator(void (*v)
 					(int port, struct uart_port *up,
 						unsigned short *capabilities));
-
 #endif

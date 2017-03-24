@@ -1635,8 +1635,6 @@ static int uart_open(struct tty_struct *tty, struct file *filp)
 	if (retval == 0)
 		retval = tty_port_block_til_ready(port, tty, filp);
 
-//	if(port)
-
 end:
 	return retval;
 err_unlock:
@@ -2242,7 +2240,7 @@ uart_report_port(struct uart_driver *drv, struct uart_port *port)
 		break;
 	}
 
-	pr_info("Advantech custom board: %s%s%s%d at %s (irq = %d"
+	pr_info("Advantech EKI %s%s%s%d at %s (irq = %d"
 			", base_baud = %d) is a %s\n",
 			port->dev ? dev_name(port->dev) : "",
 	       	port->dev ? ": " : "",
@@ -2307,12 +2305,11 @@ static void uart_configure_port(struct uart_driver *drv,
 			uart_change_pm(state, UART_PM_STATE_OFF);
 	}
 	
-	/* ignore console */
-/*
+	/*
 	if(port->type == PORT_16550A){	
 		adv_read_serial_dvid(port);
 	}
-*/
+	*/
 }
 
 #ifdef CONFIG_CONSOLE_POLL

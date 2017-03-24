@@ -140,13 +140,7 @@
 
 &am33xx_pinmux {
 	pinctrl-names = "default";
-	pinctrl-0 = <&ddr3_vtt_toggle &gpmc_pins &wdt_pins>;
-	
-	ddr3_vtt_toggle: ddr3_vtt_toggle {
-		pinctrl-single,pins = <
-			0x164 (PIN_OUTPUT | MUX_MODE7)	/* ecap0_in_pwm0_out.gpio0_7 */
-		>;
-	};
+	pinctrl-0 = <&gpmc_pins>;
 	
 	cpsw_default: cpsw_default {
 		pinctrl-single,pins = <
@@ -198,12 +192,6 @@
 		>;
 	};
 	
-	wdt_pins: pinmux_wdt_pins {
-		pinctrl-single,pins = <
-			0xe0 (PIN_INPUT_PULLUP | MUX_MODE7)	/* (U5) watchdog gpio2[22] */
-		>;
-	};
-	
 	gpmc_pins: pinmux_gpmc_pins {
 		pinctrl-single,pins = <
 			/* The nand flash pins */
@@ -241,6 +229,7 @@
 	};
 };
 
+
 &elm{
 	status = "okay";
 };
@@ -248,7 +237,6 @@
 &gpmc {
 	status = "okay";
 	pinctrl-names = "default";
-	pinctrl-0 = <&gpmc_pins>;
 	ranges = <0 0 0x08000000 0x01000000>,/* CS0: 16MB for NAND */
 			<1 0 0x09000000 0x01000000>, /* CS1: 16MB for exar uart controller 1 */
 			<2 0 0x0a000000 0x01000000>; /* CS2: 16MB for exar uart controller 2 */

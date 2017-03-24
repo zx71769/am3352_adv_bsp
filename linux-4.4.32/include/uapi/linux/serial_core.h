@@ -261,4 +261,7 @@
 /* STM32 USART */
 #define PORT_STM32	113
 
+/* Exar 16m890 */
+#define PORT_XR16M890 114
+
 #endif /* _UAPILINUX_SERIAL_CORE_H */
