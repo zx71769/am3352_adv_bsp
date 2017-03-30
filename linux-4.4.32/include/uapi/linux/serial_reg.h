@@ -25,6 +25,7 @@
 #define UART_IER_RLSI		0x04 /* Enable receiver line status interrupt */
 #define UART_IER_THRI		0x02 /* Enable Transmitter holding register int. */
 #define UART_IER_RDI		0x01 /* Enable receiver data interrupt */
+#define UART_IER_RDITO  	0x20 /* Enable character interrupt */
 /*
  * Sleep mode for ST16650 and TI16750.  For the ST16650, EFR[4]=1
  */

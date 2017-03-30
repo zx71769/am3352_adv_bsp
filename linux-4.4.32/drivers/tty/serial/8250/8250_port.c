@@ -41,11 +41,7 @@
 #include <asm/io.h>
 #include <asm/irq.h>
 
-#include <linux/gpio.h>
-#include <linux/of_gpio.h>
-
 #include "8250.h"
-
 /*
  * Debugging.
  */
@@ -69,7 +65,7 @@ static inline void adv_mcr_loopback(struct uart_port *port)
 /*
  * Here we define the default xmit fifo size used for each type of UART.
  */
-static const struct serial8250_config uart_config[] = {
+const struct serial8250_config uart_config[] = {
 	[PORT_UNKNOWN] = {
 		.name		= "unknown",
 		.fifo_size	= 1,
@@ -1718,7 +1714,6 @@ static void serial8250_set_mctrl(struct uart_port *port, unsigned int mctrl)
 	if (port->set_mctrl)
 		port->set_mctrl(port, mctrl);
 	else
-		//XXX: need to go here!
 		serial8250_do_set_mctrl(port, mctrl);
 }
 
@@ -1878,7 +1873,6 @@ int serial8250_do_startup(struct uart_port *port)
 #endif
 
 	/*
-	 * XR16M890:
 	 * Wakeup and initilaize UART 
 	*/
 	if (port->type == PORT_XR17V35X) {
@@ -1942,7 +1936,6 @@ int serial8250_do_startup(struct uart_port *port)
 
 	if (port->irq) {
 		unsigned char iir1;
-//		pr_info("Port has IRQ!!!\n");
 		/*
 		 * Test for UARTs that do not reassert THRE when the
 		 * transmitter is idle and the interrupt has already
@@ -2486,57 +2479,13 @@ static unsigned int serial8250_port_size(struct uart_8250_port *pt)
 }
 
 /*
- * The GPIO to set exar uart chip mode
- * 0 : rs422/485	
- * 1 : rs232
-*/
-static int adv_gpio_sel(struct device_node *np, struct uart_port *port)
-{
-	int ret;
-	int gpio;
-	enum of_gpio_flags flags;
-	
-	if(!np){
-		pr_err("%s: No device tree node!\n", __func__);
-		return -1;
-	}
-
-	gpio = of_get_named_gpio_flags(np, "mode-sel-gpio", 0, &flags);
-	if(!gpio_is_valid(gpio)){
-		pr_err("Cannot find %s GPIO defined!\n", np->name);
-		return -1;
-	}
-	//get request for the gpio
-	ret = devm_gpio_request(port->dev, gpio, "exar_uart_sel");
-	if(ret < 0){
-		pr_err("%s: GPIO(%d) request failed!\n", np->name, gpio);
-		return ret;
-	}
-	ret = gpio_direction_output(gpio, 1);	//set the gpio as high
-	if(ret < 0){
-		pr_err("%s: GPIO(%d) set high failed!\n", np->name, gpio);
-		return ret;
-	}
-
-	pr_info("%s set to %s mode\n", np->name,
-			gpio_get_value_cansleep(gpio)? "rs232" : "rs422/485");
-	
-	if(gpio_export(gpio, 1)){
-		pr_err("%s: GPIO(%d) export failed!\n", np->name, gpio);
-		return -1;
-	}
-
-	return 0;
-}
-
-/*
  * Resource handling.
  */
 static int serial8250_request_std_resource(struct uart_8250_port *up)
 {
+	int ret = 0;
 	unsigned int size = serial8250_port_size(up);
 	struct uart_port *port = &up->port;
-	int ret = 0;
 
 	switch (port->iotype) {
 	case UPIO_AU:
@@ -2559,9 +2508,6 @@ static int serial8250_request_std_resource(struct uart_8250_port *up)
 				ret = -ENOMEM;
 			}
 		}
-		/* try to do gpio things */
-		if(port->type == PORT_XR16M890)
-			adv_gpio_sel(port->dev->of_node, port);
 		break;
 
 	case UPIO_HUB6:
@@ -2812,6 +2758,16 @@ serial8250_verify_port(struct uart_port *port, struct serial_struct *ser)
 	return 0;
 }
 
+static int serial8250_ioctl(struct uart_port *port, 
+							unsigned int cmd, 
+							unsigned long arg)
+{
+	if (port->ioctl)
+		return port->ioctl(port, cmd, arg);
+	
+	return 0;
+}
+
 static const char *
 serial8250_type(struct uart_port *port)
 {
@@ -2843,6 +2799,7 @@ static const struct uart_ops serial8250_pops = {
 	.request_port	= serial8250_request_port,
 	.config_port	= serial8250_config_port,
 	.verify_port	= serial8250_verify_port,
+	.ioctl			= serial8250_ioctl, 
 #ifdef CONFIG_CONSOLE_POLL
 	.poll_get_char = serial8250_get_poll_char,
 	.poll_put_char = serial8250_put_poll_char,

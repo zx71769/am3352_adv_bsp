@@ -248,6 +248,7 @@ static int of_platform_serial_remove(struct platform_device *ofdev)
 	struct of_serial_info *info = platform_get_drvdata(ofdev);
 	switch (info->type) {
 #ifdef CONFIG_SERIAL_8250
+	case PORT_XR16M890:
 	case PORT_8250 ... PORT_MAX_8250:
 		serial8250_unregister_port(info->line);
 		break;
@@ -305,6 +306,7 @@ static int of_serial_suspend(struct device *dev)
 	struct of_serial_info *info = dev_get_drvdata(dev);
 
 	switch (info->type) {
+	case PORT_XR16M890:
 	case PORT_8250 ... PORT_MAX_8250:
 		of_serial_suspend_8250(info);
 		break;
@@ -320,6 +322,7 @@ static int of_serial_resume(struct device *dev)
 	struct of_serial_info *info = dev_get_drvdata(dev);
 
 	switch (info->type) {
+	case PORT_XR16M890:
 	case PORT_8250 ... PORT_MAX_8250:
 		of_serial_resume_8250(info);
 		break;

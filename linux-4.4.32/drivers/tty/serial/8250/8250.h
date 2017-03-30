@@ -217,15 +217,41 @@ static inline int serial_index(struct uart_port *port)
 	return port->minor - 64;
 }
 
-extern void set_io_from_upio(struct uart_port *p);
-extern void serial8250_clear_fifos(struct uart_8250_port *p);
-extern void serial_port_out_sync(struct uart_port *p, int offset, int value);
-extern void wait_for_xmitr(struct uart_8250_port *up, int bits);
+#ifdef CONFIG_SERIAL_8250_EXAR_16M890
+
+struct exar_priv{
+	unsigned int line;
+	unsigned int gpio_sel;
+	unsigned int charto;
+	unsigned int RTL;
+	unsigned int TTL;
+	unsigned int FCL;
+	unsigned int FCH;
+	unsigned int fifosize;
+	unsigned int throttle;
+	unsigned int mbusreadmode;
+};	
+
+static unsigned int inline 
+serialxr_serial_in(struct uart_port *p, int offset)
+{
+	return readb(p->membase+offset);
+}
+
+static void inline 
+serialxr_serial_out(struct uart_port *p, int offset, int val)
+{
+	return writeb(val, p->membase+offset);
+}
+
 extern int serialxr_startup(struct uart_port *port);
-extern void serialxr_set_termios(struct uart_port *port, struct ktermios *termios, struct ktermios *old);
-extern void serialxr_set_mctrl(struct uart_port *port, unsigned int mctrl);
-extern void inline serialxr_out(struct uart_port *p, int offset, int val);
-extern unsigned int inline serialxr_in(struct uart_port *p, int offset);
+extern void serialxr_shutdown(struct uart_port *port);
+extern void serialxr_set_termios(struct uart_port *port, struct ktermios *termios, 
+									struct ktermios *old);
+extern void serialxr_throttle(struct uart_port *port);
+extern void serialxr_unthrottle(struct uart_port *port);
+extern int serialxr_ioctl(struct uart_port *port, unsigned int cmd, unsigned long arg); 
+#endif
 
 #if 0
 #define DEBUG_INTR(fmt...)	printk(fmt)

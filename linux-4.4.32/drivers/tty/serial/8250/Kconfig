@@ -182,6 +182,7 @@ config SERIAL_8250_MANY_PORTS
 	  say N here to save some memory. You can also say Y if you have an
 	  "intelligent" multiport card such as Cyclades, Digiboards, etc.
 
+
 #
 # Multi-port serial cards
 #
@@ -229,11 +230,10 @@ config SERIAL_8250_EXAR_16M890
 	tristate "Support Exar 16M890 UART"
 	depends on SERIAL_8250 != n
 	help
-	  say Y here if you use exar 16M890 uart!
+	  say Y here if you use the exar 16M890 uart!
 
 	  To compile this driver as a module, choose M here: the module
 	  will be called 8250_exar_16M890.
-
 
 config SERIAL_8250_HUB6
 	tristate "Support Hub6 cards"

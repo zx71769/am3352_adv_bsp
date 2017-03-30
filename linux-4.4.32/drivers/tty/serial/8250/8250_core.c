@@ -44,8 +44,10 @@
 #include <asm/irq.h>
 #include <linux/omap-gpmc.h>
 
-#include "8250.h"
+#include <linux/of_gpio.h>
+#include <linux/gpio.h>
 
+#include "8250.h"
 /*
  * Configuration:
  *   share_irqs - whether we pass IRQF_SHARED to request_irq().  This option
@@ -945,6 +947,77 @@ static struct uart_8250_port *serial8250_find_match_or_unused(struct uart_port *
 	return NULL;
 }
 
+static void * XR_private_data_alloc(struct uart_8250_port *uart)
+{
+	struct exar_priv *priv;
+
+	priv = devm_kzalloc(uart->port.dev,
+						sizeof(struct exar_priv), 
+						GFP_KERNEL);
+	if(!priv){
+		pr_err("ttyS%d alloc private data failed!\n",
+				uart->port.line);
+		return NULL;
+	}
+	pr_info("ttyS%d alloc private data success!\n",
+				uart->port.line);
+	priv->line = uart->port.line;
+	
+	return (void *)priv;
+}
+/*
+ * The exar 16m890 uart chip default mode setting
+ * default set to RS232 mode
+ *
+ * gpio 0 : rs422/485 mode
+ * gpio 1 : rs232 mode
+*/
+static int XR_set_default_mode(struct uart_8250_port *uart)
+{
+	int err;
+	int gpio;
+	enum of_gpio_flags flags;
+	struct exar_priv *priv = uart->port.private_data;
+	struct device_node *np = uart->port.dev->of_node;
+	
+	if(!np){
+		pr_err("%s: No device tree node!\n", __func__);
+		err = -1;
+		goto err_out;
+	}
+
+	gpio = of_get_named_gpio_flags(np, "mode-sel-gpio", 0, &flags);
+	if(!gpio_is_valid(gpio)){
+		pr_err("Cannot find %s GPIO defined!\n", np->name);
+		err = -1;
+		goto err_out;
+	}
+	/* GPIO get number request */
+	err = devm_gpio_request(uart->port.dev, gpio, "exar_uart_sel");
+	if(err){
+		pr_err("%s: GPIO(%d) request failed!\n", np->name, gpio);
+		goto err_out;
+	}
+	/* Set GPIO as high, uart default mode as RS232 */
+	err = gpio_direction_output(gpio, 1);
+	if(err < 0){
+		pr_err("%s: GPIO(%d) set high failed!\n", np->name, gpio);
+		goto err_out;
+	}
+
+	pr_info("ttyS%d set to %s mode\n", uart->port.line,
+			gpio_get_value_cansleep(gpio)? "rs232" : "rs422/485");
+	gpio_export(gpio, 1);
+	
+	/* restore gpio number */
+	priv->gpio_sel = gpio;
+
+	return 0;
+
+err_out:
+	return err;
+}
+
 /**
  *	serial8250_register_8250_port - register a serial port
  *	@up: serial port template
@@ -958,6 +1031,7 @@ static struct uart_8250_port *serial8250_find_match_or_unused(struct uart_port *
  *
  *	On success the port is ready to use and the line number is returned.
  */
+#define XR_FILLINOPS(NAME) uart->port.NAME = serialxr_##NAME
 int serial8250_register_8250_port(struct uart_8250_port *up)
 {
 	struct uart_8250_port *uart;
@@ -982,17 +1056,20 @@ int serial8250_register_8250_port(struct uart_8250_port *up)
 		uart->port.regshift     = up->port.regshift;
 		uart->port.iotype       = up->port.iotype;
 		uart->port.flags        = up->port.flags | UPF_BOOT_AUTOCONF;
-		uart->bugs		= up->bugs;
+		uart->bugs				= up->bugs;
 		uart->port.mapbase      = up->port.mapbase;
 		uart->port.mapsize      = up->port.mapsize;
-		uart->port.private_data = up->port.private_data;
-		uart->tx_loadsz		= up->tx_loadsz;
-		uart->capabilities	= up->capabilities;
-		uart->port.throttle	= up->port.throttle;
+		uart->tx_loadsz			= up->tx_loadsz;
+		uart->capabilities		= up->capabilities;
+		uart->port.throttle		= up->port.throttle;
 		uart->port.unthrottle	= up->port.unthrottle;
 		uart->port.rs485_config	= up->port.rs485_config;
-		uart->port.rs485	= up->port.rs485;
-		uart->dma		= up->dma;
+		uart->port.rs485		= up->port.rs485;
+		uart->dma				= up->dma;
+		if(up->port.type == PORT_XR16M890)
+			uart->port.private_data = XR_private_data_alloc(uart);
+		else
+			uart->port.private_data = up->port.private_data;
 
 		/* Take tx_loadsz from fifosize if it wasn't set separately */
 		if (uart->port.fifosize && !uart->tx_loadsz)
@@ -1035,15 +1112,19 @@ int serial8250_register_8250_port(struct uart_8250_port *up)
 			uart->dl_write = up->dl_write;
 
 		/* 
-		 * For Advantech EKI:
+		 * For Advantech device server EKI series:
 		 * override the ops to xr16m890 specifically 
 		*/
-		if(uart->port.type == PORT_XR16M890){
-			uart->port.startup = serialxr_startup;
-			uart->port.set_termios = serialxr_set_termios;
-			uart->port.set_mctrl = serialxr_set_mctrl;
-			uart->port.serial_in = serialxr_in;
-			uart->port.serial_out = serialxr_out;
+		if(up->port.type == PORT_XR16M890){
+			XR_FILLINOPS(startup);
+			XR_FILLINOPS(shutdown);
+			XR_FILLINOPS(set_termios);
+			XR_FILLINOPS(serial_in);
+			XR_FILLINOPS(serial_out);
+			XR_FILLINOPS(throttle);
+			XR_FILLINOPS(unthrottle);
+			XR_FILLINOPS(ioctl);
+			XR_set_default_mode(uart);
 		}
 
 		if (uart->port.type != PORT_8250_CIR) {
@@ -1070,6 +1151,7 @@ int serial8250_register_8250_port(struct uart_8250_port *up)
 	return ret;
 }
 EXPORT_SYMBOL(serial8250_register_8250_port);
+#undef FILLINOPS
 
 /**
  *	serial8250_unregister_port - remove a 16x50 serial port at runtime

@@ -1211,8 +1211,7 @@ static int uart_set_rs485_config(struct uart_port *port,
  * Called via sys_ioctl.  We can use spin_lock_irq() here.
  */
 static int
-uart_ioctl(struct tty_struct *tty, unsigned int cmd,
-	   unsigned long arg)
+uart_ioctl(struct tty_struct *tty, unsigned int cmd, unsigned long arg)
 {
 	struct uart_state *state = tty->driver_data;
 	struct tty_port *port = &state->port;
@@ -1292,8 +1291,12 @@ uart_ioctl(struct tty_struct *tty, unsigned int cmd,
 		break;
 	default: {
 		struct uart_port *uport = state->uart_port;
+	
+		/* if is a console, stop it! */	
+		if (uport->cons) break;
+	
 		if (uport->ops->ioctl)
-			ret = uport->ops->ioctl(uport, cmd, arg);
+			ret = uport->ops->ioctl(uport, cmd, arg);//goto 8250 iotcl
 		break;
 	}
 	}
