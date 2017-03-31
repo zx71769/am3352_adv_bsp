@@ -1031,7 +1031,6 @@ err_out:
  *
  *	On success the port is ready to use and the line number is returned.
  */
-#define XR_FILLINOPS(NAME) uart->port.NAME = serialxr_##NAME
 int serial8250_register_8250_port(struct uart_8250_port *up)
 {
 	struct uart_8250_port *uart;
@@ -1119,8 +1118,6 @@ int serial8250_register_8250_port(struct uart_8250_port *up)
 			XR_FILLINOPS(startup);
 			XR_FILLINOPS(shutdown);
 			XR_FILLINOPS(set_termios);
-			XR_FILLINOPS(serial_in);
-			XR_FILLINOPS(serial_out);
 			XR_FILLINOPS(throttle);
 			XR_FILLINOPS(unthrottle);
 			XR_FILLINOPS(ioctl);

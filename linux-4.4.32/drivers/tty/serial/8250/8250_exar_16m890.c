@@ -37,6 +37,8 @@
 
 #include "8250.h"
 
+#define __maybe_unused __attribute__((unused))
+
 #ifndef CDTRDSR
 #define CDTRDSR	004000000000
 #endif
@@ -69,11 +71,11 @@
 #define XR_EXPORT(NAME) EXPORT_SYMBOL(serialxr_##NAME)
 
 extern const struct serial8250_config uart_config[];
+extern void serial8250_do_set_mctrl(struct uart_port *port, unsigned int mctrl);
 extern void serial8250_clear_fifos(struct uart_8250_port *p);
 extern void set_io_from_upio(struct uart_port *p);
 extern void serial_port_out_sync(struct uart_port *p, int offset, int value);
 extern void wait_for_xmitr(struct uart_8250_port *up, int bits);
-extern void serial8250_do_set_mctrl(struct uart_port *port, unsigned int mctrl);
 
 /*
  *@brief    set the register bit to 1
@@ -86,7 +88,7 @@ extern void serial8250_do_set_mctrl(struct uart_port *port, unsigned int mctrl);
  */
 #define NUMARGS(...)    (sizeof((int[]){__VA_ARGS__})/sizeof(int))
 #define SETBIT(...)    (adv_set_bit(NUMARGS(__VA_ARGS__), __VA_ARGS__))
-static u8 adv_set_bit(int num, ...)
+static __maybe_unused u8 adv_set_bit(int num, ...)
 {
 	u8 res = 0;
 	va_list ap;
@@ -100,43 +102,29 @@ static u8 adv_set_bit(int num, ...)
 }
 #define is_TERMIOS(flag)	((termios->c_iflag) & (flag))
 
-static void inline 
-_enable_enhance_mode(struct uart_port *port, unsigned char *old_lcr)
-{
-	*old_lcr = serial_port_in(port, UART_LCR);
-	serial_port_out(port, UART_LCR, UART_LCR_CONF_MODE_B);
-	serial_port_out(port, UART_EFR, UART_EFR_ECB);
-}
-
-
 static void set_fifo_trigger_level(struct uart_port *port,
 										unsigned int ttl,
 										unsigned int rtl)
 {
-	unsigned char old_fctr;
-	struct uart_8250_port *up = up_to_u8250p(port);
-
-	_enable_enhance_mode(port, &up->lcr);
+//	unsigned char old_fctr;
 	
-	old_fctr = serial_port_in(port, UART_FCTR);
-	/*
-	 * Set TTL:
-	 * first, set the tx fifo trigger use table-D FCTR[7:5:4]=1
-	 * Then, set TTL to TRIG register
-	*/
-	serial_port_out(port, UART_FCTR, 
-				old_fctr | SETBIT(7, 5, 4));
-	serial_port_out(port, XR_16M890_EXTENDED_TRIG, ttl);
+//	old_fctr = serial_port_in(port, UART_FCTR);
 	/*
 	 * Set RTL:
-	 * first, set the rx fifo trigger use table-D FCTR[5:4]=1, FCTR[7]=0
+	 * first, set the rx fifo trigger use table-D FCTR[5:4]=1, 
+	 * and FCTR[7]=0 means setup rx
 	 * Then, set RTL to TRIG register
 	*/
-	serial_port_out(port, UART_FCTR, 
-				(old_fctr & ~(SETBIT(7))) | SETBIT(5, 4));
+	serial_port_out(port, UART_FCTR, UART_FCTR_TRGD & ~UART_FCTR_RX);
 	serial_port_out(port, XR_16M890_EXTENDED_TRIG, rtl);
-	/* resume LCR */	
-	serial_port_out(port, UART_LCR, up->lcr);
+	/*
+	 * Set TTL:
+	 * first, set the tx fifo trigger use table-D FCTR[5:4]=1
+	 * and FCTR[7]=1 means setup tx
+	 * Then, set TTL to TRIG register
+	*/
+	serial_port_out(port, UART_FCTR, UART_FCTR_TRGD | UART_FCTR_TX);
+	serial_port_out(port, XR_16M890_EXTENDED_TRIG, ttl);
 }
 
 /*
@@ -147,7 +135,6 @@ int serialxr_startup(struct uart_port *port)
 {
 	unsigned long flags;
 	unsigned char lsr, iir;
-	unsigned char old_sfr;
 	int retval;
 	struct uart_8250_port *up = up_to_u8250p(port);
 	struct exar_priv *priv = port->private_data;
@@ -162,20 +149,40 @@ int serialxr_startup(struct uart_port *port)
 		up->capabilities = uart_config[port->type].flags;
 	up->mcr = 0;
 
-	/*
-	 * Set FIFO trigger level
-	*/
-	priv->TTL = LOWBAUD_TTL_DEFAULT;
-	priv->RTL = LOWBAUD_RTL_DEFAULT;
-	set_fifo_trigger_level(port, priv->TTL, priv->RTL);
-
-	/* TODO: need to check */
 	if (port->iotype != up->cur_iotype){
 		set_io_from_upio(port);
 	}
-	//XXX: need?
 	serial8250_rpm_get(up);
 
+	/*
+	 * Clear the FIFO buffers and disable them.
+	 * (they will be reenabled in set_termios())
+	 */
+	serial8250_clear_fifos(up);
+
+
+	/* First of all, enable enhance mode */
+	up->lcr = serial_port_in(port, UART_LCR);
+	serial_port_out(port, UART_LCR, UART_LCR_CONF_MODE_B);
+	serial_port_out(port, UART_EFR, UART_EFR_ECB);
+	/* To clear IER register, LCR[7] must be 0 */
+	up->lcr &= ~UART_LCR_DLAB;
+	serial_port_out(port, UART_LCR, up->lcr);
+	serial_port_out(port, UART_IER, 0);
+	/*
+	 * Clear the FIFO buffers and disable them.
+	 * (they will be reenabled in set_termios())
+	 */
+	serial8250_clear_fifos(up);
+	/*
+	 * Set FIFO trigger level
+	*/
+//	priv->TTL = LOWBAUD_TTL_DEFAULT;
+//	priv->RTL = LOWBAUD_RTL_DEFAULT;
+	priv->TTL = 92;
+	priv->RTL = 92;
+	set_fifo_trigger_level(port, priv->TTL, priv->RTL);
+	
 	/*
 	 * Wakeup and initilaize UART
 	 * enable TX FIFO count(SPR), 
@@ -185,21 +192,16 @@ int serialxr_startup(struct uart_port *port)
 	 * Second: LCR=0 and SFR[0]=0
 	 * Finally: config EMSR
 	 */
-	_enable_enhance_mode(port, &up->lcr);
-	serial_port_out(port, UART_FCTR, SETBIT(6, 5, 4));
+	up->lcr = serial_port_in(port, UART_LCR);
+	serial_port_out(port, UART_LCR, UART_LCR_CONF_MODE_B);
+	serial_port_out(port, UART_EFR, UART_EFR_ECB);
+	serial_port_out(port, UART_FCTR, UART_FCTR_SCR_SWAP | UART_FCTR_TRGD);
 	serial_port_out(port, UART_LCR, 0);
-	old_sfr = serial_port_in(port, XR_16M890_SFR);
-	old_sfr &= ~0x01;
-	serial_port_out(port, XR_16M890_SFR, old_sfr);
+	up->sfr &= ~0x01;
+	serial_port_out(port, XR_16M890_SFR, up->sfr);
 	serial_port_out(port, UART_EMSR, 0x01);
 	/* resume lcr */
 	serial_port_out(port, UART_LCR, up->lcr);
-
-	/*
-	 * Clear the FIFO buffers and disable them.
-	 * (they will be reenabled in set_termios())
-	 */
-	serial8250_clear_fifos(up);
 
 	/*
 	 * Clear the interrupt registers.
@@ -208,6 +210,7 @@ int serialxr_startup(struct uart_port *port)
 	serial_port_in(port, UART_RX);
 	serial_port_in(port, UART_IIR);
 	serial_port_in(port, UART_MSR);
+
 	/*
 	 * At this point, there's no way the LSR could still be 0xff;
 	 * if it is, then bail out, because there's likely no UART
@@ -316,7 +319,6 @@ int serialxr_startup(struct uart_port *port)
 
 dont_test_tx_en:
 	spin_unlock_irqrestore(&port->lock, flags);
-
 	/*
 	 * Clear the interrupt registers again for luck, and clear the
 	 * saved flags to avoid getting false values from polling
@@ -354,12 +356,10 @@ dont_test_tx_en:
 		outb_p(0x80, icp);
 		inb_p(icp);
 	}
-
-	serial_port_out(port, UART_IER, up->ier);	
 	retval = 0;
 out:
-	//XXX: need?
 	serial8250_rpm_put(up);
+	
 	return retval;
 }
 XR_EXPORT(startup);
@@ -374,7 +374,6 @@ void serialxr_shutdown(struct uart_port *port)
 
 	pr_info("==== %s ====\n", __func__);
 
-	//XXX: need?	
 	serial8250_rpm_get(up); 
 	/*
 	 * Disable interrupts from this port
@@ -402,7 +401,7 @@ void serialxr_shutdown(struct uart_port *port)
 	 * the IRQ chain.
 	 */
 	serial_port_in(port, UART_RX);
-	//XXX: need?
+	
 	serial8250_rpm_put(up);
 	/* free irq */
 	up->ops->release_irq(up);
@@ -453,7 +452,7 @@ _compute_lcr(struct uart_8250_port *port, tcflag_t c_cflag)
 */
 static inline unsigned int _get_baud_rate(struct uart_port *port,
 										struct ktermios *termios,
-										struct ktermios * old)
+										struct ktermios *old)
 {
 	unsigned int tolerance = port->uartclk / 100;
 	
@@ -471,8 +470,7 @@ static inline unsigned int _get_baud_rate(struct uart_port *port,
 #define is_RS232()	(!is_TERMIOS(XR_RS422) && !is_TERMIOS(XR_RS485))
 static void auto_flow_control(struct uart_port *port,
 								struct exar_priv *priv,
-								struct ktermios *termios,
-								unsigned char *ier)
+								struct ktermios *termios)
 {
 	unsigned char efr;
 	struct uart_8250_port *up = up_to_u8250p(port);
@@ -480,30 +478,41 @@ static void auto_flow_control(struct uart_port *port,
 	efr = UART_EFR_ECB;
 	up->lcr = serial_port_in(port, UART_LCR); 
 
-	if(is_TERMIOS(IXOFF) || is_TERMIOS(IXON)){
-		unsigned char old_sfr;
+	efr = UART_EFR_ECB;
+	serial_port_out(port, UART_LCR, UART_LCR_CONF_MODE_B);
+	if(is_TERMIOS(CRTSCTS))
+		serial_port_out(port, UART_EFR, UART_EFR_CTS);
+	else
+		serial_port_out(port, UART_EFR, 0);
+
+	if(port->flags & ASYNC_HARDPPS_CD)
+		up->ier |= UART_IER_MSI;
+
+	if(is_TERMIOS(CLOCAL))
+		port->flags &= ~ASYNC_CHECK_CD;
+	else
+		port->flags |= ASYNC_CHECK_CD;
+	
+	serial_port_out(port, UART_LCR, up->lcr);
+
+	if(is_TERMIOS(IXOFF)){
 		/*
 		 * Enable xon/xoff, LCR=0xBF & SFR[0]=0
 		 * make sure SFR[0] = 0
 		*/
-		serial_port_out(port, UART_LCR, 0);
-		old_sfr = serial_port_in(port, XR_16M890_SFR);
-		serial_port_out(port, XR_16M890_SFR, old_sfr & ~0x01); //make sure
+		efr |= 0xB;
 		serial_port_out(port, UART_LCR, UART_LCR_CONF_MODE_B);
 		serial_port_out(port, UART_XON1, START_CHAR(port->state->port.tty));
 		serial_port_out(port, UART_XON2, START_CHAR(port->state->port.tty));
 		serial_port_out(port, UART_XOFF1, STOP_CHAR(port->state->port.tty));
 		serial_port_out(port, UART_XOFF2, STOP_CHAR(port->state->port.tty));
 		//resume sfr
-		serial_port_out(port, UART_LCR, 0);
-		serial_port_out(port, XR_16M890_SFR, old_sfr);
 		serial_port_out(port, UART_LCR, up->lcr);
-		efr |= 0xB;
 	}
 
-	if(I_IXANY(port->state->port.tty)){
-		//TODO: MCR|=0x20
-	}
+	if(is_TERMIOS(IXANY))
+		up->mcr |= UART_MCR_XONANY;
+	serial8250_do_set_mctrl(port, port->mctrl);
 
 	if(is_RS232()){
 		/* rs232 mode, pull the relative GPIO to high */
@@ -512,9 +521,9 @@ static void auto_flow_control(struct uart_port *port,
 		/* enable/disable RTS/CTS */
 		if(is_TERMIOS(CRTSCTS)){
 			efr |= UART_EFR_CTS | UART_EFR_RTS;
-			*ier &= ~UART_IER_MSI;
+			up->ier &= ~UART_IER_MSI;
 		}else{
-			*ier |= UART_IER_MSI;
+			up->ier |= UART_IER_MSI;
 		}
 	}else{
 		/* rs422/485 mode pull the relative GPIO to low */
@@ -525,9 +534,9 @@ static void auto_flow_control(struct uart_port *port,
 			serial_port_out(port, UART_LCR, UART_LCR_CONF_MODE_B);
 			fctr = serial_port_in(port, UART_FCTR);
 			serial_port_out(port, UART_FCTR, fctr | XR_FCTR_DIR_CTRL);
-			serial_port_out(port, UART_LCR, up->lcr);	
+			serial_port_out(port, UART_LCR, 0);	
 		}
-		*ier &= ~UART_IER_MSI;
+		up->ier &= ~UART_IER_MSI;
 	}
 
 	serial_port_out(port, UART_LCR, UART_LCR_CONF_MODE_B);
@@ -551,7 +560,6 @@ void serialxr_set_termios(struct uart_port *port,
 	unsigned char cval, dld;
 	unsigned long flags;
 	unsigned int baud, quot, frac;
-	unsigned char fcr;
 	struct uart_8250_port *up = up_to_u8250p(port);
 	struct exar_priv *priv = port->private_data;	
 
@@ -576,44 +584,54 @@ void serialxr_set_termios(struct uart_port *port,
 	if(unlikely(!quot)) 
 		quot = port->uartclk/16 / 9600;
 
+	/* 
+	 * Finally, enable interrupts
+	 */
+	up->ier = UART_IER_MSI | 
+			UART_IER_RLSI | 
+			UART_IER_RDI | 
+			UART_IER_RDITO;
+	/* 
+	 * auto flow control setting
+	*/
+	auto_flow_control(port, priv, termios);
+	serial_port_out(port, UART_IER, up->ier);
+
 	/*
 	 * To set RTL/TTL
 	 * FIXME: assume the get_baud_rate is right 
+	 * TODO: if change TTL/RTL in ioctl?
 	*/
 	if(is_LOW_BAUDRATE(baud)){
-		fcr = UART_FCR_ENABLE_FIFO | UART_FCR_TRIGGER_1;
-		//TODO: if change TTL/RTL in ioctl?
+		up->fcr |= UART_FCR_TRIGGER_1;
 		priv->TTL = LOWBAUD_TTL_DEFAULT;
 		priv->RTL = LOWBAUD_RTL_DEFAULT;
 	}else if(is_MID_BAUDRATE(baud)){
-		fcr = UART_FCR_ENABLE_FIFO | UART_FCR_TRIGGER_1;
-		//TODO: if change TTL/RTL in ioctl?
+		up->fcr |= UART_FCR_TRIGGER_1;
 		priv->TTL = MIDBAUD_TTL_DEFAULT;
 		priv->RTL = MIDBAUD_RTL_DEFAULT;
 	}else{
-		fcr = UART_FCR_ENABLE_FIFO | UART_FCR_TRIGGER_8;
-		//TODO: if change TTL/RTL in ioctl?
+		up->fcr |= UART_FCR_TRIGGER_8;
 		priv->TTL = HIGHBAUD_TTL_DEFAULT;
 		priv->RTL = HIGHBAUD_RTL_DEFAULT;
 	}
+	up->lcr = serial_port_in(port, UART_LCR);
+	serial_port_out(port, UART_LCR, UART_LCR_CONF_MODE_B);
 	set_fifo_trigger_level(port, priv->TTL, priv->RTL);
+	serial_port_out(port, UART_LCR, up->lcr);
+	serial_port_out(port, UART_FCR, UART_FCR_ENABLE_FIFO);
+	serial_port_out(port, UART_FCR, up->fcr);
+
+	port->read_status_mask = UART_LSR_OE | UART_LSR_THRE | UART_LSR_DR;
+	if (is_TERMIOS(INPCK))
+		port->read_status_mask |= UART_LSR_FE | UART_LSR_PE;
+	if (is_TERMIOS(IGNBRK | BRKINT | PARMRK))
+		port->read_status_mask |= UART_LSR_BI;
 	
 	/* To set fifo size */
 	//TODO: if change fifo size?
 	priv->fifosize = FIFOSIZE_DEFAULT;
-	port->fifosize = priv->fifosize;
-/*
-	frac = (port->uartclk / baud) - (16 * quot);
-#define DIVISOR_CHANGED
-#ifdef DIVISOR_CHANGED
-	if(quot > 1){
-		quot--;
-	}else if((port->uartclk / baud) <= (16 * quot)){
-		frac = 0;
-	}
-#endif
-*/
-	//XXX: need?
+	
 	serial8250_rpm_get(up);
 	/*
 	 * Ok, we're now changing the port state.  Do it with
@@ -627,11 +645,6 @@ void serialxr_set_termios(struct uart_port *port,
 	 */
 	uart_update_timeout(port, termios->c_cflag, baud);
 
-	port->read_status_mask = UART_LSR_OE | UART_LSR_THRE | UART_LSR_DR;
-	if (is_TERMIOS(INPCK))
-		port->read_status_mask |= UART_LSR_FE | UART_LSR_PE;
-	if (is_TERMIOS(IGNBRK | BRKINT | PARMRK))
-		port->read_status_mask |= UART_LSR_BI;
 	/*
 	 * Characteres to ignore
 	 */
@@ -654,48 +667,24 @@ void serialxr_set_termios(struct uart_port *port,
 		port->ignore_status_mask |= UART_LSR_DR;
 	
 	/* 
-	 * Finally, enable interrupts
-	 */
-	up->ier = UART_IER_MSI | 
-			UART_IER_RLSI | 
-			UART_IER_RDI | 
-			UART_IER_RDITO;
-	/*
-	 * CTS flow control flags and modem status interrupts
-	*/
-	if(port->state->port.flags & ASYNC_HARDPPS_CD)
-		up->ier |= UART_IER_MSI; //twice?
-	if(is_TERMIOS(CLOCAL))
-		port->state->port.flags &= ~ASYNC_CHECK_CD;
-	else
-		port->state->port.flags |= ASYNC_CHECK_CD;
-	/* 
-	 * auto flow control setting
-	*/
-	auto_flow_control(port, priv, termios, &up->ier);
-	serial_port_out(port, UART_IER, up->ier);
-
-	/* 
 	 * Set divisor
 	*/
-	serial_port_out(port, UART_LCR, cval|UART_LCR_DLAB);
+	/* TODO: if any baud rate,
+		need to set DLD
+	*/
+	//	serial_port_out(port, XR_16M890_DLD, (quot&0x0f)|dld);
+	
+	serial_port_out(port, UART_LCR, UART_LCR_DLAB);
 	serial_port_out(port, UART_DLL, quot & 0xff);	/* LS of divisor */
 	serial_port_out(port, UART_DLM, quot >> 8);		/* MS of divisor */
-	/* any boaudrate support */
-//	serial_port_out(port, XR_16M890_DLD, (quot&0x0f)|dld);
-	serial_port_out(port, UART_LCR, cval);
 	/*
 	 * LCR DLAB must be set to enable 64-byte FIFO mode. If the FCR
 	 * is written without DLAB set, this mode will be disabled.
 	 */
 	serial_port_out(port, UART_LCR, up->lcr);	/* reset DLAB */
-	serial_port_out(port, UART_FCR, fcr);
-	
-	serial8250_do_set_mctrl(port, port->mctrl);
-	
+
 	spin_unlock_irqrestore(&port->lock, flags);
 	
-	//XXX: need?
 	serial8250_rpm_put(up);
 	/* Don't rewrite B0 */
 	if (tty_termios_baud_rate(termios))

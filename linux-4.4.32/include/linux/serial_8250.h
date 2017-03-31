@@ -96,6 +96,10 @@ struct uart_8250_port {
 	unsigned char		ier;
 	unsigned char		lcr;
 	unsigned char		mcr;
+#ifdef CONFIG_SERIAL_8250_EXAR_16M890
+	unsigned char		fctr;
+	unsigned char		sfr;
+#endif
 	unsigned char		mcr_mask;	/* mask of user bits */
 	unsigned char		mcr_force;	/* mask of forced bits */
 	unsigned char		cur_iotype;	/* Running I/O type */

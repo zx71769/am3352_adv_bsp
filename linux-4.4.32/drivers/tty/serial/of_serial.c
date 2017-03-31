@@ -353,8 +353,11 @@ static const struct of_device_id of_platform_serial_table[] = {
 	{ .compatible = "altr,16550-FIFO128", .data = (void *)PORT_ALTR_16550_F128, },
 	{ .compatible = "mrvl,mmp-uart", .data = (void *)PORT_XSCALE, },
 	{ .compatible = "mrvl,pxa-uart", .data = (void *)PORT_XSCALE, },
-	{ .compatible = "exar,16m890",  .data = (void *)PORT_XR16M890, },
-//	{ .compatible = "exar,16m890",  .data = (void *)PORT_16550A, },
+#ifdef CONFIG_SERIAL_8250_EXAR_16M890
+	{ .compatible = "exar,16m890", .data = (void *)PORT_XR16M890, },
+#else
+	{ .compatible = "exar,16m890", .data = (void *)PORT_16550A, },
+#endif
 #ifdef CONFIG_SERIAL_OF_PLATFORM_NWPSERIAL
 	{ .compatible = "ibm,qpace-nwp-serial", .data = (void *)PORT_NWPSERIAL, },
 #endif

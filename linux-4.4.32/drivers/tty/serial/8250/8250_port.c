@@ -95,12 +95,12 @@ const struct serial8250_config uart_config[] = {
 		.flags		= UART_CAP_FIFO, 
 	},
 	[PORT_XR16M890] = {
-		.name		= "xr16m890",
+		.name		= "XR16M890",
 		.fifo_size	= 128,
 		.tx_loadsz	= 128,
-		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_10,
+		.fcr		= UART_FCR_ENABLE_FIFO,
 		.rxtrig_bytes	= {1, 4, 8, 14},
-		.flags		= UART_CAP_FIFO, /* uart has fifo */
+		.flags		= UART_CAP_FIFO | UPF_NO_TXEN_TEST, /* uart has fifo */
 	},
 	[PORT_CIRRUS] = {
 		.name		= "Cirrus",
@@ -532,16 +532,20 @@ EXPORT_SYMBOL_GPL(serial8250_clear_and_reinit_fifos);
 
 void serial8250_rpm_get(struct uart_8250_port *p)
 {
-	if (!(p->capabilities & UART_CAP_RPM))
-		return;
+	/* To make sure it won't be excute in xr16m890 */
+	if (p->port.type == PORT_XR16M890) return;
+ 
+	if (!(p->capabilities & UART_CAP_RPM)) return;
 	pm_runtime_get_sync(p->port.dev);
 }
 EXPORT_SYMBOL_GPL(serial8250_rpm_get);
 
 void serial8250_rpm_put(struct uart_8250_port *p)
 {
-	if (!(p->capabilities & UART_CAP_RPM))
-		return;
+	/* To make sure it won't be excute in xr16m890 */
+	if (p->port.type == PORT_XR16M890) return;
+
+	if (!(p->capabilities & UART_CAP_RPM)) return;
 	pm_runtime_mark_last_busy(p->port.dev);
 	pm_runtime_put_autosuspend(p->port.dev);
 }
@@ -2288,6 +2292,8 @@ serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
 	unsigned char cval;
 	unsigned long flags;
 	unsigned int baud, quot, frac = 0;
+
+	pr_info("==== %s ====\n", __func__);
 
 	cval = serial8250_compute_lcr(up, termios->c_cflag);
 
