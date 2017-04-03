@@ -231,41 +231,22 @@ struct exar_priv{
 	unsigned int mbusreadmode;
 };	
 
-#define __u		struct uart_port *port
-
-#define _extern_startup \
-	extern int serialxr_startup(__u);
-#define _extern_shutdown \
-	extern void serialxr_shutdown(__u);
-#define _extern_set_termios \
-	extern void serialxr_set_termios(__u, struct ktermios *termios, struct ktermios *old);
-#define _extern_throttle \
-	extern void serialxr_throttle(__u);
-#define _extern_unthrottle \
-	extern void serialxr_unthrottle(__u);
-#define _extern_ioctl	\
-	extern int serialxr_ioctl(__u, unsigned int cmd, unsigned long arg);
-#define _extern_set_mctrl \
-	extern void serialxr_set_mctrl(__u, unsigned int mctrl);
-#define _extern_handle_irq \
-	extern void serialxr_hanlde_irq(__u);
-#define _extern_handle_break \
-	extern void serialxr_handle_break(__u);
-#define _extern_rs485_config \
-	extern int serialxr_rs485_config(__u, struct serial_rs485 *rs485);
-#define _extern_pm	\
-	extern void serialxr_pm(__u, unsigned int state, unsigned int old_state);
+int serialxr_startup(struct uart_port *);
+void serialxr_shutdown(struct uart_port *);
+void serialxr_set_termios(struct uart_port *, struct ktermios *, struct ktermios *);
+void serialxr_throttle(struct uart_port *);
+void serialxr_unthrottle(struct uart_port *);
+int serialxr_ioctl(struct uart_port *, unsigned int, unsigned long);
 	
-#define XR_FILLINOPS(NAME) do{\
-	_extern_##NAME;	\
+#define XR_FILLINOPS(NAME) \
 	uart->port.NAME = serialxr_##NAME;\
-}while(0)
 
 #else
 
 #define XR_FILLINOPS(NAME) do { } while (0)
 
 #endif
+
 #if 0
 #define DEBUG_INTR(fmt...)	printk(fmt)
 #else
