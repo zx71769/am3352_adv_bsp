@@ -565,32 +565,25 @@ void serialxr_set_termios(struct uart_port *port,
 
 	pr_info("=== %s ===\n", __func__);
 
-	/*
-	 * compute lcr
-	*/
 	cval = _compute_lcr(up, termios->c_cflag);
-
 	baud = _get_baud_rate(port, termios, old);
 	if(unlikely(!baud)) baud = 9600;
 	/*
 	 * Determine divisor base on baud rate
 	*/	
 	quot = uart_get_divisor(port, baud);
-	/*
-	 * TODO: if anybaudrate,
-	 * baud = anybaudrate;
-	 * quot = port->uartclk/16 / baud
-	*/
 	if(unlikely(!quot)) 
 		quot = port->uartclk/16 / 9600;
 
-	/* 
-	 * Finally, enable interrupts
-	 */
-	up->ier = UART_IER_MSI | 
-			UART_IER_RLSI | 
-			UART_IER_RDI | 
-			UART_IER_RDITO;
+	/***************************************
+	 * TODO: if anybaudrate,
+	 * baud = anybaudrate;
+	 * quot = port->uartclk/16 / baud
+	*****************************************/
+
+	/* Finally, enable interrupts */
+	up->ier = UART_IER_MSI | UART_IER_RLSI | 
+			UART_IER_RDI | UART_IER_RDITO;
 	/* 
 	 * auto flow control setting
 	*/
@@ -598,7 +591,7 @@ void serialxr_set_termios(struct uart_port *port,
 	serial_port_out(port, UART_IER, up->ier);
 
 	/*
-	 * To set RTL/TTL
+	 * Set RTL/TTL
 	 * FIXME: assume the get_baud_rate is right 
 	 * TODO: if change TTL/RTL in ioctl?
 	*/
@@ -619,7 +612,6 @@ void serialxr_set_termios(struct uart_port *port,
 	serial_port_out(port, UART_LCR, UART_LCR_CONF_MODE_B);
 	set_fifo_trigger_level(port, priv->TTL, priv->RTL);
 	serial_port_out(port, UART_LCR, up->lcr);
-	serial_port_out(port, UART_FCR, UART_FCR_ENABLE_FIFO);
 	serial_port_out(port, UART_FCR, up->fcr);
 
 	port->read_status_mask = UART_LSR_OE | UART_LSR_THRE | UART_LSR_DR;
@@ -631,6 +623,7 @@ void serialxr_set_termios(struct uart_port *port,
 	/* To set fifo size */
 	//TODO: if change fifo size?
 	priv->fifosize = FIFOSIZE_DEFAULT;
+	up->lcr = cval;			/* Save computed LCR */
 	
 	serial8250_rpm_get(up);
 	/*
@@ -638,8 +631,7 @@ void serialxr_set_termios(struct uart_port *port,
 	 * interrupts disabled.
 	 */
 	spin_lock_irqsave(&port->lock, flags);
-
-	up->lcr = cval;					/* Save computed LCR */
+	
 	/*
 	 * Update the per-port timeout.
 	 */
@@ -669,11 +661,11 @@ void serialxr_set_termios(struct uart_port *port,
 	/* 
 	 * Set divisor
 	*/
-	/* TODO: if any baud rate,
-		need to set DLD
-	*/
-	//	serial_port_out(port, XR_16M890_DLD, (quot&0x0f)|dld);
-	
+	/***************************** 
+	 *TODO: if any baud rate,
+	 *	need to set DLD
+	********************************/
+	//serial_port_out(port, XR_16M890_DLD, (quot&0x0f)|dld);
 	serial_port_out(port, UART_LCR, UART_LCR_DLAB);
 	serial_port_out(port, UART_DLL, quot & 0xff);	/* LS of divisor */
 	serial_port_out(port, UART_DLM, quot >> 8);		/* MS of divisor */
