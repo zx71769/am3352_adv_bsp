@@ -227,25 +227,32 @@ struct exar_priv{
 	unsigned int FCL;
 	unsigned int FCH;
 	unsigned int fifosize;
-	unsigned int throttle;
+	bool throttle;
 	unsigned int mbusreadmode;
+	unsigned long rx;
+	unsigned long tx;
+	unsigned long trx;
+	unsigned long ttx;
 };	
+
+#define XR_FILLINOPS(NAME) \
+	uart->port.NAME = serialxr_##NAME;
 
 int serialxr_startup(struct uart_port *);
 void serialxr_shutdown(struct uart_port *);
-void serialxr_set_termios(struct uart_port *, struct ktermios *, struct ktermios *);
+void serialxr_set_termios(struct uart_port *, 
+						struct ktermios *, 
+						struct ktermios *);
 void serialxr_throttle(struct uart_port *);
 void serialxr_unthrottle(struct uart_port *);
-int serialxr_ioctl(struct uart_port *, unsigned int, unsigned long);
-	
-#define XR_FILLINOPS(NAME) \
-	uart->port.NAME = serialxr_##NAME;\
+int serialxr_ioctl(struct uart_port *, unsigned int, 
+					unsigned long);
+int serialxr_handle_irq(struct uart_port *);
+void serialxr_tx_chars(struct uart_8250_port *);
 
 #else
-
 #define XR_FILLINOPS(NAME) do { } while (0)
-
-#endif
+#endif	/* CONFIG_SERIAL_8250_EXAR_16M890 */
 
 #if 0
 #define DEBUG_INTR(fmt...)	printk(fmt)

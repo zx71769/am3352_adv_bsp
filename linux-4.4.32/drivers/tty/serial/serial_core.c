@@ -362,14 +362,12 @@ uart_get_baud_rate(struct uart_port *port, struct ktermios *termios,
 
 	for (try = 0; try < 2; try++) {
 		baud = tty_termios_baud_rate(termios);
-
 		/*
 		 * The spd_hi, spd_vhi, spd_shi, spd_warp kludge...
 		 * Die! Die! Die!
 		 */
 		if (try == 0 && baud == 38400)
 			baud = altbaud;
-
 		/*
 		 * Special case: B0 rate.
 		 */
@@ -380,7 +378,6 @@ uart_get_baud_rate(struct uart_port *port, struct ktermios *termios,
 
 		if (baud >= min && baud <= max)
 			return baud;
-
 		/*
 		 * Oops, the quotient was zero.  Try again with
 		 * the old baud rate if possible.
@@ -394,7 +391,6 @@ uart_get_baud_rate(struct uart_port *port, struct ktermios *termios,
 			old = NULL;
 			continue;
 		}
-
 		/*
 		 * As a last resort, if the range cannot be met then clip to
 		 * the nearest chip supported rate.
@@ -412,7 +408,6 @@ uart_get_baud_rate(struct uart_port *port, struct ktermios *termios,
 	WARN_ON(1);
 	return 0;
 }
-
 EXPORT_SYMBOL(uart_get_baud_rate);
 
 /**
@@ -2173,50 +2168,6 @@ int uart_resume_port(struct uart_driver *drv, struct uart_port *uport)
 	return 0;
 }
 
-#define UART_DLD 0x2
-static inline void adv_read_serial_dvid(struct uart_port *port)
-{
-	unsigned int data;
-	unsigned char efr = 0;
-	unsigned char dld = 0;
-	unsigned char lcr = 0;
-	unsigned char dll = 0;
-	unsigned char dlm = 0;
-	unsigned char dvid = 0;
-
-	pr_info("Phil: ==== Ready to read UART vendor ID ====\n");
-	/* clean the trash data */
-	while((serial_port_in(port, UART_LSR) & UART_LSR_DR)){
-		data = port->serial_in(port, UART_RX);
-		pr_info("The trash data: 0x%0X\n", data);
-	}
-
-	lcr = serial_port_in(port, UART_LCR);
-	serial_port_out(port, UART_LCR, 0xBF);
-	
-	efr = serial_port_in(port, UART_EFR);
-	serial_port_out(port, UART_EFR, (efr|UART_EFR_ECB));
-	if(serial_port_in(port, UART_EFR) & UART_EFR_ECB)
-		pr_info("Set EFR to enhance mode\n");
-
-	serial_port_out(port, UART_LCR, 0x80);
-	dld = serial_port_in(port, UART_DLD);
-	serial_port_out(port, UART_DLD, (dld|0xC0));
-
-	dll = serial_port_in(port, UART_DLL);
-	dlm = serial_port_in(port, UART_DLM);
-	serial_port_out(port, UART_DLL, 0x00);
-	serial_port_out(port, UART_DLM, 0x00);
-
-	dvid = serial_port_in(port, 0x02);
-	pr_info("Phil: ==== DVID 0x%0X ====\n", dvid);
-	
-	serial_port_out(port, UART_DLL, dll);
-	serial_port_out(port, UART_DLM, dlm);
-	serial_port_out(port, UART_LCR, lcr);
-}
-#undef UART_DLD
-
 static inline void
 uart_report_port(struct uart_driver *drv, struct uart_port *port)
 {
@@ -2307,12 +2258,6 @@ static void uart_configure_port(struct uart_driver *drv,
 		if (!uart_console(port))
 			uart_change_pm(state, UART_PM_STATE_OFF);
 	}
-	
-	/*
-	if(port->type == PORT_16550A){	
-		adv_read_serial_dvid(port);
-	}
-	*/
 }
 
 #ifdef CONFIG_CONSOLE_POLL

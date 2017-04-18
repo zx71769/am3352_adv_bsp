@@ -87,10 +87,10 @@ static unsigned int probe_rsa_count;
 #endif /* CONFIG_SERIAL_8250_RSA  */
 
 struct irq_info {
-	struct			hlist_node node;
-	int			irq;
-	spinlock_t		lock;	/* Protects list not the hash */
-	struct list_head	*head;
+	struct			 hlist_node node;
+	int				 irq;
+	spinlock_t		 lock;	/* Protects list not the hash */
+	struct list_head *head;
 };
 
 #define NR_IRQ_HASH		32	/* Can be adjusted later */
@@ -178,7 +178,6 @@ static void serial_do_unlink(struct irq_info *i, struct uart_8250_port *up)
 		kfree(i);
 	}
 }
-
 static int serial_link_irq_chain(struct uart_8250_port *up)
 {
 	struct hlist_head *h;
@@ -221,7 +220,7 @@ static int serial_link_irq_chain(struct uart_8250_port *up)
 		spin_unlock_irq(&i->lock);
 		irq_flags |= up->port.irqflags;
 		ret = request_irq(up->port.irq, serial8250_interrupt,
-				  irq_flags, "serial", i);
+						  		irq_flags, "serial", i);
 		if (ret < 0)
 			serial_do_unlink(i, up);
 	}
@@ -947,7 +946,8 @@ static struct uart_8250_port *serial8250_find_match_or_unused(struct uart_port *
 	return NULL;
 }
 
-static void * XR_private_data_alloc(struct uart_8250_port *uart)
+#ifdef CONFIG_SERIAL_8250_EXAR_16M890
+static void * XR_private_data_alloc(struct uart_8250_port *uart, int gpio)
 {
 	struct exar_priv *priv;
 
@@ -959,12 +959,12 @@ static void * XR_private_data_alloc(struct uart_8250_port *uart)
 				uart->port.line);
 		return NULL;
 	}
-	pr_info("ttyS%d alloc private data success!\n",
-				uart->port.line);
 	priv->line = uart->port.line;
+	priv->gpio_sel = gpio;
 	
 	return (void *)priv;
 }
+#endif
 /*
  * The exar 16m890 uart chip default mode setting
  * default set to RS232 mode
@@ -977,7 +977,6 @@ static int XR_set_default_mode(struct uart_8250_port *uart)
 	int err;
 	int gpio;
 	enum of_gpio_flags flags;
-	struct exar_priv *priv = uart->port.private_data;
 	struct device_node *np = uart->port.dev->of_node;
 	
 	if(!np){
@@ -1008,9 +1007,6 @@ static int XR_set_default_mode(struct uart_8250_port *uart)
 	pr_info("ttyS%d set to %s mode\n", uart->port.line,
 			gpio_get_value_cansleep(gpio)? "rs232" : "rs422/485");
 	gpio_export(gpio, 1);
-	
-	/* restore gpio number */
-	priv->gpio_sel = gpio;
 
 	return 0;
 
@@ -1031,6 +1027,7 @@ err_out:
  *
  *	On success the port is ready to use and the line number is returned.
  */
+
 int serial8250_register_8250_port(struct uart_8250_port *up)
 {
 	struct uart_8250_port *uart;
@@ -1065,10 +1062,7 @@ int serial8250_register_8250_port(struct uart_8250_port *up)
 		uart->port.rs485_config	= up->port.rs485_config;
 		uart->port.rs485		= up->port.rs485;
 		uart->dma				= up->dma;
-		if(up->port.type == PORT_XR16M890)
-			uart->port.private_data = XR_private_data_alloc(uart);
-		else
-			uart->port.private_data = up->port.private_data;
+		uart->port.private_data = up->port.private_data;
 
 		/* Take tx_loadsz from fifosize if it wasn't set separately */
 		if (uart->port.fifosize && !uart->tx_loadsz)
@@ -1115,13 +1109,19 @@ int serial8250_register_8250_port(struct uart_8250_port *up)
 		 * override the ops to xr16m890 specifically 
 		*/
 		if(up->port.type == PORT_XR16M890){
+			int gpio;
+			
 			XR_FILLINOPS(startup);
 			XR_FILLINOPS(shutdown);
 			XR_FILLINOPS(set_termios);
 			XR_FILLINOPS(throttle);
 			XR_FILLINOPS(unthrottle);
 			XR_FILLINOPS(ioctl);
-			XR_set_default_mode(uart);
+			XR_FILLINOPS(handle_irq);
+			gpio = XR_set_default_mode(uart);
+#ifdef CONFIG_SERIAL_8250_EXAR_16M890
+			uart->port.private_data = XR_private_data_alloc(uart, gpio);
+#endif
 		}
 
 		if (uart->port.type != PORT_8250_CIR) {
@@ -1148,7 +1148,6 @@ int serial8250_register_8250_port(struct uart_8250_port *up)
 	return ret;
 }
 EXPORT_SYMBOL(serial8250_register_8250_port);
-#undef FILLINOPS
 
 /**
  *	serial8250_unregister_port - remove a 16x50 serial port at runtime

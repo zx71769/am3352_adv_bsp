@@ -100,7 +100,7 @@ const struct serial8250_config uart_config[] = {
 		.tx_loadsz	= 128,
 		.fcr		= UART_FCR_ENABLE_FIFO,
 		.rxtrig_bytes	= {1, 4, 8, 14},
-		.flags		= UART_CAP_FIFO | UPF_NO_TXEN_TEST, /* uart has fifo */
+		.flags		= UART_CAP_FIFO,// | UPF_NO_TXEN_TEST, /* uart has fifo */
 	},
 	[PORT_CIRRUS] = {
 		.name		= "Cirrus",
@@ -467,7 +467,8 @@ void set_io_from_upio(struct uart_port *p)
 	}
 	/* Remember loaded iotype */
 	up->cur_iotype = p->iotype;
-	p->handle_irq = serial8250_default_handle_irq;
+	if(!p->handle_irq)
+		p->handle_irq = serial8250_default_handle_irq;
 }
 EXPORT_SYMBOL_GPL(set_io_from_upio);
 
@@ -1334,10 +1335,6 @@ static void serial8250_start_tx(struct uart_port *port)
 {
 	struct uart_8250_port *up = up_to_u8250p(port);
 
-/*
-	if(port->type == PORT_XR16M890)
-		adv_mcr_loopback(port);
-*/
 	serial8250_rpm_get_tx(up);
 
 	if (up->dma && !up->dma->tx_dma(up))
@@ -1351,8 +1348,9 @@ static void serial8250_start_tx(struct uart_port *port)
 			unsigned char lsr;
 			lsr = serial_in(up, UART_LSR);
 			up->lsr_saved_flags |= lsr & LSR_SAVE_FLAGS;
-			if (lsr & UART_LSR_THRE)
+			if (lsr & UART_LSR_THRE){
 				serial8250_tx_chars(up);
+			}
 		}
 	}
 
@@ -1593,17 +1591,20 @@ int serial8250_handle_irq(struct uart_port *port, unsigned int iir)
 	DEBUG_INTR("status = %x...", status);
 
 	if (status & (UART_LSR_DR | UART_LSR_BI)) {
-		if (up->dma){
+		if (up->dma)
 			dma_err = up->dma->rx_dma(up, iir);
-		}
 
 		if (!up->dma || dma_err)
 			status = serial8250_rx_chars(up, status);
 	}
+
 	serial8250_modem_status(up);
+
 	if ((!up->dma || (up->dma && up->dma->tx_err)) &&
-	    (status & UART_LSR_THRE))
+		    (status & UART_LSR_THRE))
+	{
 		serial8250_tx_chars(up);
+	}
 
 	spin_unlock_irqrestore(&port->lock, flags);
 	return 1;
@@ -1619,6 +1620,7 @@ static int serial8250_default_handle_irq(struct uart_port *port)
 	serial8250_rpm_get(up);
 
 	iir = serial_port_in(port, UART_IIR);
+	pr_info("interrupt: 0x%0X\n", iir);
 	ret = serial8250_handle_irq(port, iir);
 
 	serial8250_rpm_put(up);
@@ -2199,7 +2201,7 @@ static unsigned int serial8250_get_divisor(struct uart_8250_port *up,
 	return quot;
 }
 
-static unsigned char serial8250_compute_lcr(struct uart_8250_port *up,
+unsigned char serial8250_compute_lcr(struct uart_8250_port *up,
 					    tcflag_t c_cflag)
 {
 	unsigned char cval;
@@ -2236,6 +2238,7 @@ static unsigned char serial8250_compute_lcr(struct uart_8250_port *up,
 
 	return cval;
 }
+EXPORT_SYMBOL(serial8250_compute_lcr);
 
 static void serial8250_set_divisor(struct uart_port *port, unsigned int baud,
 			    unsigned int quot, unsigned int quot_frac)
@@ -2267,7 +2270,7 @@ static void serial8250_set_divisor(struct uart_port *port, unsigned int baud,
 		serial_port_out(port, 0x2, quot_frac);
 }
 
-static unsigned int
+unsigned int
 serial8250_get_baud_rate(struct uart_port *port, struct ktermios *termios,
 			 struct ktermios *old)
 {
@@ -2283,10 +2286,11 @@ serial8250_get_baud_rate(struct uart_port *port, struct ktermios *termios,
 				  port->uartclk / 16 / 0xffff,
 				  (port->uartclk + tolerance) / 16);
 }
+EXPORT_SYMBOL(serial8250_get_baud_rate);
 
-void
-serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
-		          struct ktermios *old)
+void serial8250_do_set_termios(struct uart_port *port, 
+							struct ktermios *termios,
+		          			struct ktermios *old)
 {
 	struct uart_8250_port *up = up_to_u8250p(port);
 	unsigned char cval;
@@ -2764,14 +2768,13 @@ serial8250_verify_port(struct uart_port *port, struct serial_struct *ser)
 	return 0;
 }
 
-static int serial8250_ioctl(struct uart_port *port, 
-							unsigned int cmd, 
+static int serial8250_ioctl(struct uart_port *port, unsigned int cmd, 
 							unsigned long arg)
 {
 	if (port->ioctl)
 		return port->ioctl(port, cmd, arg);
 	
-	return 0;
+	return -ENOSYS;
 }
 
 static const char *

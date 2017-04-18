@@ -356,7 +356,7 @@ static const struct of_device_id of_platform_serial_table[] = {
 #ifdef CONFIG_SERIAL_8250_EXAR_16M890
 	{ .compatible = "exar,16m890", .data = (void *)PORT_XR16M890, },
 #else
-	{ .compatible = "exar,16m890", .data = (void *)PORT_16550A, },
+	{ .compatible = "exar,16m890", .data = (void *)PORT_16850, },
 #endif
 #ifdef CONFIG_SERIAL_OF_PLATFORM_NWPSERIAL
 	{ .compatible = "ibm,qpace-nwp-serial", .data = (void *)PORT_NWPSERIAL, },

@@ -196,10 +196,13 @@
  * These are the definitions for the Programmable Trigger Register
  */
 #define UART_TRG_1		0x01
+#define UART_TRG_2		0x02
 #define UART_TRG_4		0x04
+#define UART_TRG_5		0x05
 #define UART_TRG_8		0x08
 #define UART_TRG_16		0x10
 #define UART_TRG_32		0x20
+#define UART_TRG_48		0x30
 #define UART_TRG_64		0x40
 #define UART_TRG_96		0x60
 #define UART_TRG_120		0x78
