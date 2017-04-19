@@ -85,7 +85,6 @@ static long adv_am335x_wdt_ioctl(struct file *file,
 								unsigned int cmd, 
 								unsigned long arg)
 {
-	pr_info("%s\n", __func__);
 	adv_am335x_wdt_disable();
 	wd_count = TIMEOUT;	
 	return 0;
@@ -94,7 +93,6 @@ static long adv_am335x_wdt_ioctl(struct file *file,
 static int adv_am335x_wdt_open(struct inode *inode, 
 								struct file *file)
 {
-	pr_info("%s\n", __func__);
 	wd_count = TIMEOUT;
 	return 0;
 }
@@ -102,7 +100,6 @@ static int adv_am335x_wdt_open(struct inode *inode,
 static int adv_am335x_wdt_release(struct inode *inode, 
 									struct file *file)
 {
-	pr_info("%s\n", __func__);
 	wd_count = 0;
 	return 0;
 }
@@ -239,7 +236,7 @@ static int __init adv_am335x_wdt_init(void)
 	adv_timer.function = adv_am335x_wdt_reset_handle;
 	adv_am335x_wdt_reset_handle(0);
 	
-	pr_info("Advantech watchdog timer init success!\n");
+	pr_info("Advantech watchdog timer ready!\n");
 
 	return 0;
 }

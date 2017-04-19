@@ -53,15 +53,6 @@
 
 #define BOTH_EMPTY 	(UART_LSR_TEMT | UART_LSR_THRE)
 
-static inline void adv_mcr_loopback(struct uart_port *port)
-{
-	unsigned char mcr = 0;
-	
-	pr_info("Phil: ==== Start loopback test ====\n");
-	mcr = serial_port_in(port, UART_MCR);
-	serial_port_out(port, UART_MCR, mcr|UART_MCR_LOOP);
-}
-
 /*
  * Here we define the default xmit fifo size used for each type of UART.
  */
@@ -93,14 +84,6 @@ const struct serial8250_config uart_config[] = {
 		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_10,
 		.rxtrig_bytes	= {1, 4, 8, 14},
 		.flags		= UART_CAP_FIFO, 
-	},
-	[PORT_XR16M890] = {
-		.name		= "XR16M890",
-		.fifo_size	= 128,
-		.tx_loadsz	= 128,
-		.fcr		= UART_FCR_ENABLE_FIFO,
-		.rxtrig_bytes	= {1, 4, 8, 14},
-		.flags		= UART_CAP_FIFO,// | UPF_NO_TXEN_TEST, /* uart has fifo */
 	},
 	[PORT_CIRRUS] = {
 		.name		= "Cirrus",
@@ -159,6 +142,13 @@ const struct serial8250_config uart_config[] = {
 		.tx_loadsz	= 128,
 		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_10,
 		.flags		= UART_CAP_FIFO | UART_CAP_EFR | UART_CAP_SLEEP,
+	},
+	[PORT_XR16M890] = {
+		.name		= "XR16M890",
+		.fifo_size	= 128,
+		.tx_loadsz	= 128,
+		.fcr		= UART_FCR_ENABLE_FIFO,
+		.flags		= UART_CAP_FIFO, /* uart has fifo */
 	},
 	[PORT_RSA] = {
 		.name		= "RSA",
@@ -1202,8 +1192,7 @@ static void autoconfig(struct uart_8250_port *up)
 	/*
 	 * Only probe for RSA ports if we got the region.
 	 */
-	if (port->type == PORT_16550A || 
-			port->type == PORT_XR16M890 && 
+	if (port->type == PORT_16550A && 
 			up->probe & UART_PROBE_RSA &&
 	    	__enable_rsa(up))
 	{
@@ -1331,6 +1320,16 @@ static void serial8250_stop_tx(struct uart_port *port)
 	serial8250_rpm_put(up);
 }
 
+static inline void serial_tx_workaround(struct uart_8250_port *up)
+{
+#ifdef CONFIG_SERIAL_8250_EXAR_16M890
+	if(up->port.type == PORT_XR16M890)
+		serialxr_tx_chars(up);
+	else
+#endif
+		serial8250_tx_chars(up);
+}
+
 static void serial8250_start_tx(struct uart_port *port)
 {
 	struct uart_8250_port *up = up_to_u8250p(port);
@@ -1348,9 +1347,8 @@ static void serial8250_start_tx(struct uart_port *port)
 			unsigned char lsr;
 			lsr = serial_in(up, UART_LSR);
 			up->lsr_saved_flags |= lsr & LSR_SAVE_FLAGS;
-			if (lsr & UART_LSR_THRE){
-				serial8250_tx_chars(up);
-			}
+			if (lsr & UART_LSR_THRE)
+				serial_tx_workaround(up);
 		}
 	}
 
@@ -2297,8 +2295,6 @@ void serial8250_do_set_termios(struct uart_port *port,
 	unsigned long flags;
 	unsigned int baud, quot, frac = 0;
 
-	pr_info("==== %s ====\n", __func__);
-
 	cval = serial8250_compute_lcr(up, termios->c_cflag);
 
 	baud = serial8250_get_baud_rate(port, termios, old);
@@ -2733,9 +2729,6 @@ static void serial8250_config_port(struct uart_port *port, int flags)
 
 	/* if access method is AU, it is a 16550 with a quirk */
 	if (port->type == PORT_16550A && port->iotype == UPIO_AU)
-		up->bugs |= UART_BUG_NOMSR;
-
-	if(port->type == PORT_XR16M890 && port->iotype == UPIO_AU)
 		up->bugs |= UART_BUG_NOMSR;
 
 	/* HW bugs may trigger IRQ while IIR == NO_INT */

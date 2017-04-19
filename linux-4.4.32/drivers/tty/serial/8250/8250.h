@@ -218,8 +218,11 @@ static inline int serial_index(struct uart_port *port)
 }
 
 #ifdef CONFIG_SERIAL_8250_EXAR_16M890
+enum porttype { PORT_RS232, PORT_RS422, PORT_RS485 };
+
 struct exar_priv{
 	unsigned int line;
+	unsigned int baud;
 	unsigned int gpio_sel;
 	unsigned int charto;
 	unsigned int RTL;
@@ -228,11 +231,10 @@ struct exar_priv{
 	unsigned int FCH;
 	unsigned int fifosize;
 	bool throttle;
-	unsigned int mbusreadmode;
+	bool mbusreadmode;
 	unsigned long rx;
 	unsigned long tx;
-	unsigned long trx;
-	unsigned long ttx;
+	enum porttype type;
 };	
 
 #define XR_FILLINOPS(NAME) \
@@ -249,6 +251,10 @@ int serialxr_ioctl(struct uart_port *, unsigned int,
 					unsigned long);
 int serialxr_handle_irq(struct uart_port *);
 void serialxr_tx_chars(struct uart_8250_port *);
+void serialxr_pm(struct uart_port *, unsigned int, 
+					unsigned int);
+void serialxr_proc_show(struct seq_file *, 
+					struct uart_port *);
 
 #else
 #define XR_FILLINOPS(NAME) do { } while (0)

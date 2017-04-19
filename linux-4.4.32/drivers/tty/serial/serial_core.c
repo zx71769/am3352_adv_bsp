@@ -1681,6 +1681,15 @@ static void uart_line_info(struct seq_file *m, struct uart_driver *drv, int i)
 		return;
 	}
 
+#ifdef CONFIG_SERIAL_8250_EXAR_16M890
+	if (uport->type == PORT_XR16M890) {
+		if(uport->proc_show){
+			uport->proc_show(m, uport);
+			return;
+		}
+	}
+#endif
+
 	if (capable(CAP_SYS_ADMIN)) {
 		mutex_lock(&port->mutex);
 		pm_state = state->pm_state;

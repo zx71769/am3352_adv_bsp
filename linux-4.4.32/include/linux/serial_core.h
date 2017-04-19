@@ -136,6 +136,9 @@ struct uart_port {
 						struct serial_rs485 *rs485);
 	int				(*ioctl)(struct uart_port *, unsigned int, 
 							unsigned long);
+#ifdef CONFIG_SERIAL_8250_EXAR_16M890
+	void		(*proc_show)(struct seq_file *, struct uart_port *);
+#endif
 	unsigned int		irq;			/* irq number */
 	unsigned long		irqflags;		/* irq flags  */
 	unsigned int		uartclk;		/* base uart clock */

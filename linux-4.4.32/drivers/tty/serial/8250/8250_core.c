@@ -1118,6 +1118,8 @@ int serial8250_register_8250_port(struct uart_8250_port *up)
 			XR_FILLINOPS(unthrottle);
 			XR_FILLINOPS(ioctl);
 			XR_FILLINOPS(handle_irq);
+			XR_FILLINOPS(pm);
+			XR_FILLINOPS(proc_show);
 			gpio = XR_set_default_mode(uart);
 #ifdef CONFIG_SERIAL_8250_EXAR_16M890
 			uart->port.private_data = XR_private_data_alloc(uart, gpio);
